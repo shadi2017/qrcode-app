@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Code Manager</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+    <script src="https://unpkg.com/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dexie/3.2.4/dexie.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>QR Code Manager</h1>
+            <p>Generate, Scan & Track QR Codes</p>
+        </div>
+
+        <div class="nav-buttons">
+            <button class="nav-btn create-btn active" onclick="showSection('create')">
+                Create QR Code
+            </button>
+            <button class="nav-btn scan-btn" onclick="showSection('scan')">
+                Scan QR Code
+            </button>
+            <button class="nav-btn report-btn" onclick="showSection('report')">
+                View Reports
+            </button>
+        </div>
+
+        <!-- Create QR Code Section -->
+        <div id="create-section" class="section active">
+            <h2>Create New QR Code</h2>
+            <div class="form-group">
+                <label for="name">Name:</label>
+                <input type="text" id="name" placeholder="Enter name" required>
+            </div>
+            <div class="form-group">
+                <label for="phone">Phone Number:</label>
+                <input type="tel" id="phone" placeholder="Enter phone number" required>
+            </div>
+            <button class="action-btn" onclick="generateQR()">Generate QR Code</button>
+            
+            <div id="qr-result" class="qr-display" style="display: none;">
+                <h3 id="qr-name"></h3>
+                <canvas id="qr-canvas"></canvas>
+                <button class="action-btn" onclick="saveQRImage()">Save Image</button>
+            </div>
+            
+            <div id="create-status" class="status"></div>
+        </div>
+
+        <!-- Scan QR Code Section -->
+        <div id="scan-section" class="section">
+            <h2>Scan QR Code</h2>
+            <div id="scanner-container"></div>
+            <button class="action-btn" onclick="startScanner()">Start Scanner</button>
+            <button class="action-btn" onclick="stopScanner()">Stop Scanner</button>
+            
+            <div id="scan-result" class="scanner-result" style="display: none;"></div>
+            <div id="scan-status" class="status"></div>
+        </div>
+
+        <!-- Reports Section -->
+        <div id="report-section" class="section">
+            <h2>Scan Reports</h2>
+            <div class="report-filters">
+                <input type="date" id="filter-date" placeholder="Filter by date">
+                <input type="text" id="filter-name" placeholder="Filter by name">
+                <button class="action-btn" onclick="loadReports()">Apply Filters</button>
+                <button class="action-btn" onclick="clearFilters()">Clear Filters</button>
+            </div>
+            
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Phone</th>
+                        <th>Scan Date</th>
+                        <th>Scan Time</th>
+                    </tr>
+                </thead>
+                <tbody id="report-tbody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>

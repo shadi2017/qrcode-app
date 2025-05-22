@@ -1,0 +1,26 @@
+{
+  "name": "qr-code-manager",
+  "version": "1.0.0",
+  "description": "QR Code Generator and Scanner Web Application",
+  "main": "index.html",
+  "scripts": {
+    "start": "http-server -p 8000",
+    "dev": "python3 -m http.server 8000"
+  },
+  "keywords": [
+    "qr-code",
+    "scanner",
+    "generator",
+    "web-app"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "qrcode": "^1.5.3",
+    "html5-qrcode": "^2.3.8",
+    "dexie": "^3.2.4"
+  },
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  }
+}
