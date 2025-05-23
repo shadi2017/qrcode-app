@@ -1,4 +1,4 @@
-// Initialize Database
+// Initialize Database with enhanced structure
 const db = new Dexie('QRCodeDB');
 db.version(1).stores({
     qrcodes: '++id, name, phone, created_date',
@@ -33,6 +33,30 @@ function showSection(sectionName) {
     }
 }
 
+// Clear previous QR code display
+function clearPreviousQR() {
+    const qrResult = document.getElementById('qr-result');
+    const canvas = document.getElementById('qr-canvas');
+    const existingImg = canvas.parentNode.querySelector('img');
+    
+    // Hide the result section
+    qrResult.style.display = 'none';
+    
+    // Clear canvas
+    if (canvas.getContext) {
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+    
+    // Remove any existing fallback image
+    if (existingImg && existingImg !== canvas) {
+        existingImg.remove();
+    }
+    
+    // Reset canvas display
+    canvas.style.display = 'block';
+}
+
 // QR Code Generation
 async function generateQR() {
     const name = document.getElementById('name').value.trim();
@@ -43,6 +67,9 @@ async function generateQR() {
         return;
     }
 
+    // Clear any previous QR code first
+    clearPreviousQR();
+
     try {
         // Check if QRCode library is loaded
         if (typeof QRCode === 'undefined') {
@@ -51,13 +78,13 @@ async function generateQR() {
             return;
         }
 
-        // Generate QR code with phone number
+        // Generate QR code with phone number - BLACK COLOR
         const canvas = document.getElementById('qr-canvas');
         await QRCode.toCanvas(canvas, phone, {
             width: 300,
             margin: 2,
             color: {
-                dark: '#4CAF50',
+                dark: '#000000',  // Changed to black
                 light: '#FFFFFF'
             }
         });
@@ -86,22 +113,23 @@ async function generateQR() {
     }
 }
 
-// Fallback QR Generation using Google Charts API
+// Fallback QR Generation using QR Server API - BLACK COLOR
 async function generateQRFallback(name, phone) {
     try {
         console.log('Using fallback QR generation method');
         
-        // Create QR code using Google Charts API
-        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(phone)}&color=4CAF50&bgcolor=FFFFFF`;
+        // Create QR code using QR Server API with black color
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(phone)}&color=000000&bgcolor=FFFFFF`;
         
         // Create image element
         const qrContainer = document.getElementById('qr-result');
         const canvas = document.getElementById('qr-canvas');
         const img = document.createElement('img');
         img.src = qrUrl;
-        img.style.border = '3px solid #4CAF50';
+        img.style.border = '3px solid #000000';
         img.style.borderRadius = '10px';
         img.style.margin = '20px 0';
+        img.id = 'qr-fallback-img';
         
         // Replace canvas with image
         canvas.style.display = 'none';
@@ -130,27 +158,74 @@ async function generateQRFallback(name, phone) {
     }
 }
 
-// Save QR Image
+// Save QR Image with proper filename
 function saveQRImage() {
     const canvas = document.getElementById('qr-canvas');
     const name = document.getElementById('qr-name').textContent;
     
+    if (!name) {
+        showStatus('create-status', 'Error: No QR code to save', 'error');
+        return;
+    }
+    
     try {
+        // Clean filename (remove special characters)
+        const cleanName = name.replace(/[^a-zA-Z0-9]/g, '_');
+        const timestamp = new Date().toISOString().split('T')[0];
+        const filename = `QR_${cleanName}_${timestamp}.png`;
+        
         if (canvas.style.display !== 'none' && canvas.getContext) {
             // Save canvas as image
-            const link = document.createElement('a');
-            link.download = `qr-code-${name}.png`;
-            link.href = canvas.toDataURL();
-            link.click();
+            canvas.toBlob(function(blob) {
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.download = filename;
+                link.href = url;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+                
+                showStatus('create-status', `QR code saved as ${filename}`, 'success');
+                
+                // Clear the QR display after saving
+                setTimeout(() => {
+                    clearPreviousQR();
+                }, 1000);
+            }, 'image/png');
         } else {
             // Save image element (fallback method)
-            const img = canvas.parentNode.querySelector('img');
+            const img = document.getElementById('qr-fallback-img');
             if (img) {
-                const link = document.createElement('a');
-                link.download = `qr-code-${name}.png`;
-                link.href = img.src;
-                link.target = '_blank';
-                link.click();
+                // Convert image to canvas for download
+                const tempCanvas = document.createElement('canvas');
+                const ctx = tempCanvas.getContext('2d');
+                tempCanvas.width = 300;
+                tempCanvas.height = 300;
+                
+                const tempImg = new Image();
+                tempImg.crossOrigin = 'anonymous';
+                tempImg.onload = function() {
+                    ctx.drawImage(tempImg, 0, 0);
+                    tempCanvas.toBlob(function(blob) {
+                        const url = URL.createObjectURL(blob);
+                        const link = document.createElement('a');
+                        link.download = filename;
+                        link.href = url;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        URL.revokeObjectURL(url);
+                        
+                        showStatus('create-status', `QR code saved as ${filename}`, 'success');
+                        
+                        // Clear the QR display after saving
+                        setTimeout(() => {
+                            clearPreviousQR();
+                        }, 1000);
+                    }, 'image/png');
+                };
+                tempImg.src = img.src;
             } else {
                 showStatus('create-status', 'Error: No QR code to save', 'error');
             }
@@ -186,12 +261,48 @@ function stopScanner() {
     }
 }
 
+// Check if already scanned today
+async function checkTodaysScan(phone) {
+    const today = new Date().toISOString().split('T')[0];
+    const todaysScan = await db.scans
+        .where('phone').equals(phone)
+        .and(scan => scan.scan_date === today)
+        .first();
+    
+    return todaysScan !== undefined;
+}
+
 async function onScanSuccess(decodedText, decodedResult) {
     try {
         // Find the QR code in database
         const qrRecord = await db.qrcodes.where('phone').equals(decodedText).first();
         
         if (qrRecord) {
+            // Check if already scanned today
+            const alreadyScannedToday = await checkTodaysScan(decodedText);
+            
+            if (alreadyScannedToday) {
+                // Show already scanned message
+                const resultDiv = document.getElementById('scan-result');
+                resultDiv.innerHTML = `
+                    <h3>Already Scanned Today!</h3>
+                    <p><strong>Name:</strong> ${qrRecord.name}</p>
+                    <p><strong>Phone:</strong> ${qrRecord.phone}</p>
+                    <p><strong>Status:</strong> This QR code has already been scanned today. Please try again tomorrow.</p>
+                `;
+                resultDiv.style.display = 'block';
+                resultDiv.className = 'scanner-result already-scanned';
+                
+                showStatus('scan-status', 'QR Code already scanned today!', 'error');
+                
+                // Stop scanner after showing message
+                setTimeout(() => {
+                    stopScanner();
+                }, 2000);
+                
+                return;
+            }
+            
             // Save scan record
             const now = new Date();
             await db.scans.add({
@@ -210,8 +321,15 @@ async function onScanSuccess(decodedText, decodedResult) {
                 <p><strong>Scanned at:</strong> ${now.toLocaleString()}</p>
             `;
             resultDiv.style.display = 'block';
+            resultDiv.className = 'scanner-result success';
             
             showStatus('scan-status', 'QR Code scanned successfully!', 'success');
+            
+            // Stop scanner after successful scan
+            setTimeout(() => {
+                stopScanner();
+            }, 2000);
+            
         } else {
             showStatus('scan-status', 'QR Code not found in database', 'error');
         }
@@ -262,6 +380,13 @@ async function loadReports() {
                 `;
             });
         }
+        
+        // Show total count
+        const countDiv = document.getElementById('scan-count');
+        if (countDiv) {
+            countDiv.textContent = `Total scans: ${scans.length}`;
+        }
+        
     } catch (error) {
         console.error('Error loading reports:', error);
     }
@@ -273,11 +398,59 @@ function clearFilters() {
     loadReports();
 }
 
+// Export data function for backup
+async function exportData() {
+    try {
+        const qrcodes = await db.qrcodes.toArray();
+        const scans = await db.scans.toArray();
+        
+        const data = {
+            qrcodes: qrcodes,
+            scans: scans,
+            exportDate: new Date().toISOString()
+        };
+        
+        const dataStr = JSON.stringify(data, null, 2);
+        const blob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        
+        const link = document.createElement('a');
+        link.download = `qr_backup_${new Date().toISOString().split('T')[0]}.json`;
+        link.href = url;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        
+        showStatus('create-status', 'Data exported successfully!', 'success');
+    } catch (error) {
+        console.error('Error exporting data:', error);
+        showStatus('create-status', 'Error exporting data', 'error');
+    }
+}
+
+// Clear input fields when switching to create section
+function clearCreateForm() {
+    document.getElementById('name').value = '';
+    document.getElementById('phone').value = '';
+    clearPreviousQR();
+}
+
+// Add event listeners to form inputs to clear QR when typing
+function setupFormListeners() {
+    const nameInput = document.getElementById('name');
+    const phoneInput = document.getElementById('phone');
+    
+    nameInput.addEventListener('input', clearPreviousQR);
+    phoneInput.addEventListener('input', clearPreviousQR);
+}
+
 // Utility Functions
 function showStatus(elementId, message, type) {
     const statusEl = document.getElementById(elementId);
     statusEl.textContent = message;
     statusEl.className = `status ${type}`;
+    statusEl.style.display = 'block';
     
     // Hide after 5 seconds
     setTimeout(() => {
@@ -285,13 +458,39 @@ function showStatus(elementId, message, type) {
     }, 5000);
 }
 
+// Database sync function (for future cloud integration)
+async function syncDatabase() {
+    // This function can be extended to sync with a cloud database
+    // For now, it just ensures the local database is open
+    try {
+        await db.open();
+        console.log('Database synced successfully');
+    } catch (error) {
+        console.error('Database sync failed:', error);
+    }
+}
+
 // Initialize app
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize database
-    db.open().catch(function(error) {
+    db.open().then(() => {
+        console.log('Database opened successfully');
+        // Sync database periodically
+        setInterval(syncDatabase, 30000); // Sync every 30 seconds
+    }).catch(function(error) {
         console.error('Failed to open database:', error);
     });
     
+    // Setup form listeners
+    setupFormListeners();
+    
     // Show create section by default
     showSection('create');
+    
+    // Add service worker for offline support (if available)
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js').catch(function(error) {
+            console.log('Service Worker registration failed:', error);
+        });
+    }
 });
