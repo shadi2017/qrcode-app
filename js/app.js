@@ -89,6 +89,13 @@ async function generateQR() {
             }
         });
 
+        // Draw name below QR code
+        const ctx = canvas.getContext('2d');
+        ctx.font = '20px Arial';
+        ctx.fillStyle = '#333';
+        ctx.textAlign = 'center';
+        ctx.fillText(name, canvas.width / 2, canvas.height - 10); // 10px from bottom
+
         // Display result
         document.getElementById('qr-name').textContent = name;
         document.getElementById('qr-result').style.display = 'block';
@@ -429,6 +436,38 @@ async function exportData() {
     }
 }
 
+// Import data from JSON file
+async function importData(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+
+        if (Array.isArray(data.qrcodes)) {
+            for (const qr of data.qrcodes) {
+                // Avoid duplicates
+                const exists = await db.qrcodes.where('phone').equals(qr.phone).first();
+                if (!exists) await db.qrcodes.add(qr);
+            }
+        }
+        if (Array.isArray(data.scans)) {
+            for (const scan of data.scans) {
+                // Avoid duplicates
+                const exists = await db.scans
+                    .where('[phone+scan_date]')
+                    .equals([scan.phone, scan.scan_date])
+                    .first();
+                if (!exists) await db.scans.add(scan);
+            }
+        }
+        showStatus('create-status', 'Data imported successfully!', 'success');
+        loadReports();
+    } catch (error) {
+        showStatus('create-status', 'Error importing data', 'error');
+    }
+}
+
 // Clear input fields when switching to create section
 function clearCreateForm() {
     document.getElementById('name').value = '';
@@ -468,6 +507,30 @@ async function syncDatabase() {
     } catch (error) {
         console.error('Database sync failed:', error);
     }
+}
+
+function exportReportsToExcel() {
+    const rows = [['Name', 'Phone', 'Scan Date', 'Scan Time']];
+    const tbody = document.getElementById('report-tbody');
+    for (const tr of tbody.querySelectorAll('tr')) {
+        const cells = Array.from(tr.querySelectorAll('td')).map(td => td.textContent);
+        if (cells.length) rows.push(cells);
+    }
+    if (rows.length === 1) {
+        showStatus('create-status', 'No data to export', 'error');
+        return;
+    }
+    const csvContent = rows.map(e => e.map(v => `"${v.replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `scan_reports_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    showStatus('create-status', 'Reports exported as Excel (CSV) file!', 'success');
 }
 
 // Initialize app

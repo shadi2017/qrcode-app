@@ -409,6 +409,9 @@
                 <h3>Data Management</h3>
                 <p>Export your QR codes and scan data for backup</p>
                 <button class="export-btn" onclick="exportData()">Export Data</button>
+                <!-- Add Import Button and File Input -->
+                <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)">
+                <button class="export-btn" onclick="document.getElementById('import-file').click()">Import Data</button>
             </div>
         </div>
 
@@ -447,6 +450,7 @@
             </table>
             
             <div id="scan-count"></div>
+            <button class="export-btn" onclick="exportReportsToExcel()">Export Reports to Excel</button>
         </div>
     </div>
 
