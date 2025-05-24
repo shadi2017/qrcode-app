@@ -178,10 +178,18 @@ function saveQRImage() {
     try {
         // Clean filename (remove special characters)
         const cleanName = name.replace(/[^a-zA-Z0-9]/g, '_');
-        const timestamp = new Date().toISOString().split('T')[0];
-        const filename = `QR_${cleanName}_${timestamp}.png`;
+        const filename = `${cleanName}.png`;
         
         if (canvas.style.display !== 'none' && canvas.getContext) {
+            // Always redraw the name on the canvas before saving
+            const ctx = canvas.getContext('2d');
+            // Redraw QR code (optional, but ensures name is on image)
+            // ctx.clearRect(0, 0, canvas.width, canvas.height); // Don't clear, just draw name again
+            ctx.font = '20px Arial';
+            ctx.fillStyle = '#333';
+            ctx.textAlign = 'center';
+            ctx.fillText(name, canvas.width / 2, canvas.height - 10); // 10px from bottom
+
             // Save canvas as image
             canvas.toBlob(function(blob) {
                 const url = URL.createObjectURL(blob);
@@ -208,12 +216,17 @@ function saveQRImage() {
                 const tempCanvas = document.createElement('canvas');
                 const ctx = tempCanvas.getContext('2d');
                 tempCanvas.width = 300;
-                tempCanvas.height = 300;
+                tempCanvas.height = 340; // Extra space for name
                 
                 const tempImg = new Image();
                 tempImg.crossOrigin = 'anonymous';
                 tempImg.onload = function() {
-                    ctx.drawImage(tempImg, 0, 0);
+                    ctx.drawImage(tempImg, 0, 0, 300, 300);
+                    // Draw name below QR
+                    ctx.font = '20px Arial';
+                    ctx.fillStyle = '#333';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(name, 150, 330); // 30px below QR
                     tempCanvas.toBlob(function(blob) {
                         const url = URL.createObjectURL(blob);
                         const link = document.createElement('a');
@@ -444,24 +457,21 @@ async function importData(event) {
         const text = await file.text();
         const data = JSON.parse(text);
 
+        // Clear existing data before importing
+        await db.qrcodes.clear();
+        await db.scans.clear();
+
         if (Array.isArray(data.qrcodes)) {
             for (const qr of data.qrcodes) {
-                // Avoid duplicates
-                const exists = await db.qrcodes.where('phone').equals(qr.phone).first();
-                if (!exists) await db.qrcodes.add(qr);
+                await db.qrcodes.add(qr);
             }
         }
         if (Array.isArray(data.scans)) {
             for (const scan of data.scans) {
-                // Avoid duplicates
-                const exists = await db.scans
-                    .where('[phone+scan_date]')
-                    .equals([scan.phone, scan.scan_date])
-                    .first();
-                if (!exists) await db.scans.add(scan);
+                await db.scans.add(scan);
             }
         }
-        showStatus('create-status', 'Data imported successfully!', 'success');
+        showStatus('create-status', 'Data imported successfully! (Old data cleared)', 'success');
         loadReports();
     } catch (error) {
         showStatus('create-status', 'Error importing data', 'error');
