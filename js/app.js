@@ -558,17 +558,21 @@ async function loadAllQRCodes() {
         }
         for (const qr of qrcodes) {
             const row = document.createElement('tr');
-            // Generate QR image as data URL
+            // Generate QR image as data URL or fallback
             let qrImgHtml = '';
+            let qrImgSrc = '';
             if (typeof QRCode !== 'undefined' && QRCode.toDataURL) {
                 try {
-                    const dataUrl = await QRCode.toDataURL(qr.phone, { width: 80, margin: 1, color: { dark: '#000000', light: '#FFFFFF' } });
-                    qrImgHtml = `<img src="${dataUrl}" alt="QR" style="width:80px;height:80px;">`;
+                    qrImgSrc = await QRCode.toDataURL(qr.phone, { width: 80, margin: 1, color: { dark: '#000000', light: '#FFFFFF' } });
+                    qrImgHtml = `<img src="${qrImgSrc}" alt="QR" style="width:80px;height:80px;">`;
                 } catch (e) {
-                    qrImgHtml = '<span>QR Error</span>';
+                    // fallback
+                    qrImgSrc = `https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(qr.phone)}&color=000000&bgcolor=FFFFFF`;
+                    qrImgHtml = `<img src="${qrImgSrc}" alt="QR" style="width:80px;height:80px;">`;
                 }
             } else {
-                qrImgHtml = '<span>QR Lib Missing</span>';
+                qrImgSrc = `https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(qr.phone)}&color=000000&bgcolor=FFFFFF`;
+                qrImgHtml = `<img src="${qrImgSrc}" alt="QR" style="width:80px;height:80px;">`;
             }
             row.innerHTML = `
                 <td>${qr.name}</td>
@@ -581,6 +585,74 @@ async function loadAllQRCodes() {
     } catch (error) {
         tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">Error loading QR codes</td></tr>';
     }
+}
+
+// Export all QR codes as a PDF
+async function exportAllQRCodesToPDF() {
+    const qrcodes = await db.qrcodes.toArray();
+    if (qrcodes.length === 0) {
+        showStatus('create-status', 'No QR codes to export', 'error');
+        return;
+    }
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    let y = 40;
+    pdf.setFontSize(18);
+    pdf.text('All Generated QR Codes', pageWidth / 2, y, { align: 'center' });
+    y += 30;
+    pdf.setFontSize(12);
+    // Table headers
+    pdf.text('Name', 40, y);
+    pdf.text('Phone', 180, y);
+    pdf.text('Created Date', 320, y);
+    pdf.text('QR Code', 460, y);
+    y += 10;
+    pdf.setLineWidth(0.5);
+    pdf.line(40, y, pageWidth - 40, y);
+    y += 20;
+    for (const qr of qrcodes) {
+        if (y > 750) { // New page if needed
+            pdf.addPage();
+            y = 40;
+        }
+        pdf.text(qr.name || '', 40, y);
+        pdf.text(qr.phone || '', 180, y);
+        pdf.text(qr.created_date || '', 320, y);
+        // Get QR image
+        let qrImgSrc = '';
+        if (typeof QRCode !== 'undefined' && QRCode.toDataURL) {
+            try {
+                qrImgSrc = await QRCode.toDataURL(qr.phone, { width: 80, margin: 1, color: { dark: '#000000', light: '#FFFFFF' } });
+            } catch (e) {
+                qrImgSrc = `https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(qr.phone)}&color=000000&bgcolor=FFFFFF`;
+            }
+        } else {
+            qrImgSrc = `https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(qr.phone)}&color=000000&bgcolor=FFFFFF`;
+        }
+        // If it's a data URL, add directly; if it's an external URL, fetch and convert to data URL
+        let imgDataUrl = qrImgSrc;
+        if (!qrImgSrc.startsWith('data:')) {
+            // Fetch and convert to data URL
+            try {
+                const response = await fetch(qrImgSrc);
+                const blob = await response.blob();
+                imgDataUrl = await new Promise(resolve => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(reader.result);
+                    reader.readAsDataURL(blob);
+                });
+            } catch (e) {
+                imgDataUrl = '';
+            }
+        }
+        if (imgDataUrl) {
+            pdf.addImage(imgDataUrl, 'PNG', 460, y - 15, 40, 40);
+        }
+        y += 50;
+    }
+    pdf.save('all_qr_codes.pdf');
+    showStatus('create-status', 'All QR codes exported as PDF!', 'success');
 }
 
 // Initialize app

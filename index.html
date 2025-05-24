@@ -8,6 +8,7 @@
     <script src="https://unpkg.com/qrcode@1.5.3/build/qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dexie/3.2.4/dexie.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="js/app.js"></script>
     <style>
         * {
@@ -464,6 +465,7 @@
         <!-- All QR Codes Section -->
         <div id="qrlist-section" class="section">
             <h2>All Generated QR Codes</h2>
+            <button class="export-btn" onclick="exportAllQRCodesToPDF()">Export All QR Codes to PDF</button>
             <table class="report-table">
                 <thead>
                     <tr>
