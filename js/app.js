@@ -30,6 +30,9 @@ function showSection(sectionName) {
     } else if (sectionName === 'report') {
         document.querySelector('.report-btn').classList.add('active');
         loadReports();
+    } else if (sectionName === 'qrlist') {
+        document.querySelector('.qrlist-btn').classList.add('active');
+        loadAllQRCodes();
     }
 }
 
@@ -541,6 +544,43 @@ function exportReportsToExcel() {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
     showStatus('create-status', 'Reports exported as Excel (CSV) file!', 'success');
+}
+
+// Load and display all QR codes in a table
+async function loadAllQRCodes() {
+    const tbody = document.getElementById('qrlist-tbody');
+    tbody.innerHTML = '';
+    try {
+        const qrcodes = await db.qrcodes.toArray();
+        if (qrcodes.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">No QR codes found</td></tr>';
+            return;
+        }
+        for (const qr of qrcodes) {
+            const row = document.createElement('tr');
+            // Generate QR image as data URL
+            let qrImgHtml = '';
+            if (typeof QRCode !== 'undefined' && QRCode.toDataURL) {
+                try {
+                    const dataUrl = await QRCode.toDataURL(qr.phone, { width: 80, margin: 1, color: { dark: '#000000', light: '#FFFFFF' } });
+                    qrImgHtml = `<img src="${dataUrl}" alt="QR" style="width:80px;height:80px;">`;
+                } catch (e) {
+                    qrImgHtml = '<span>QR Error</span>';
+                }
+            } else {
+                qrImgHtml = '<span>QR Lib Missing</span>';
+            }
+            row.innerHTML = `
+                <td>${qr.name}</td>
+                <td>${qr.phone}</td>
+                <td>${qr.created_date || ''}</td>
+                <td>${qrImgHtml}</td>
+            `;
+            tbody.appendChild(row);
+        }
+    } catch (error) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">Error loading QR codes</td></tr>';
+    }
 }
 
 // Initialize app

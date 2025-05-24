@@ -84,6 +84,11 @@
             color: white;
         }
 
+        .qrlist-btn {
+            background: linear-gradient(45deg, #FF9800, #F57C00);
+            color: white;
+        }
+
         .nav-btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(0,0,0,0.2);
@@ -382,6 +387,9 @@
             <button class="nav-btn report-btn" onclick="showSection('report')">
                 View Reports
             </button>
+            <button class="nav-btn qrlist-btn" onclick="showSection('qrlist')">
+                View All QR Codes
+            </button>
         </div>
 
         <!-- Create QR Code Section -->
@@ -451,6 +459,23 @@
             
             <div id="scan-count"></div>
             <button class="export-btn" onclick="exportReportsToExcel()">Export Reports to Excel</button>
+        </div>
+
+        <!-- All QR Codes Section -->
+        <div id="qrlist-section" class="section">
+            <h2>All Generated QR Codes</h2>
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Phone</th>
+                        <th>Created Date</th>
+                        <th>QR Code</th>
+                    </tr>
+                </thead>
+                <tbody id="qrlist-tbody">
+                </tbody>
+            </table>
         </div>
     </div>
 
