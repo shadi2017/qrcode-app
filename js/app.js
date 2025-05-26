@@ -659,13 +659,24 @@ async function showQRDetails(qrId) {
             document.getElementById('competition').value = latestEval.competition || '';
             document.getElementById('project').value = latestEval.project || '';
             document.getElementById('quiz_grade').value = latestEval.quiz_grade || '';
+            document.getElementById('evaluation-date').value = latestEval.eval_date || new Date().toISOString().split('T')[0];
         } else {
             document.querySelectorAll('.eval-dropdown').forEach(dropdown => {
                 dropdown.value = '';
             });
+            document.getElementById('evaluation-date').value = new Date().toISOString().split('T')[0];
         }
         const saveBtn = document.getElementById('save-evaluation');
         saveBtn.onclick = () => saveEvaluation(qrId);
+        // Render evaluation history
+        renderEvaluationHistory(qrId);
+        // Add filter listeners
+        document.getElementById('apply-eval-filter').onclick = () => renderEvaluationHistory(qrId);
+        document.getElementById('clear-eval-filter').onclick = () => {
+            document.getElementById('filter-eval-date').value = '';
+            document.getElementById('filter-eval-name').value = '';
+            renderEvaluationHistory(qrId);
+        };
         const modal = document.getElementById('qr-details-modal');
         modal.style.display = 'block';
         document.querySelector('.close-modal').onclick = () => {
@@ -720,6 +731,7 @@ async function saveEvaluation(qrId) {
         const competition = document.getElementById('competition').value;
         const project = document.getElementById('project').value;
         const quiz_grade = document.getElementById('quiz_grade').value;
+        const evalDate = document.getElementById('evaluation-date').value || new Date().toISOString().split('T')[0];
         await db.evaluations.add({
             qrcode_id: qrId,
             attendance,
@@ -732,7 +744,8 @@ async function saveEvaluation(qrId) {
             games,
             competition,
             project,
-            quiz_grade
+            quiz_grade,
+            eval_date: evalDate
         });
         showStatus('create-status', 'Evaluation saved successfully!', 'success');
         document.getElementById('qr-details-modal').style.display = 'none';
@@ -740,6 +753,64 @@ async function saveEvaluation(qrId) {
         console.error('Error saving evaluation:', error);
         showStatus('create-status', 'Error saving evaluation', 'error');
     }
+}
+
+// Show all previous evaluations for this QR code, with filter
+async function renderEvaluationHistory(qrId) {
+    const tableDiv = document.getElementById('evaluation-history-table');
+    if (!tableDiv) return;
+    let evals = await db.evaluations.where('qrcode_id').equals(qrId).toArray();
+    // Apply filters
+    const filterDate = document.getElementById('filter-eval-date').value;
+    const filterName = document.getElementById('filter-eval-name').value.trim().toLowerCase();
+    if (filterDate) {
+        evals = evals.filter(e => e.eval_date === filterDate);
+    }
+    if (filterName) {
+        // Try to get QR name from qrcodes table
+        const qr = await db.qrcodes.get(qrId);
+        if (qr && qr.name && !qr.name.toLowerCase().includes(filterName)) {
+            evals = [];
+        }
+    }
+    if (evals.length === 0) {
+        tableDiv.innerHTML = '<div style="text-align:center; color:#888;">لا يوجد تقييمات سابقة</div>';
+        return;
+    }
+    let html = '<table style="width:100%; border-collapse:collapse; background:#fff; border-radius:8px; overflow:hidden; box-shadow:0 2px 5px rgba(0,0,0,0.05);">';
+    html += '<thead><tr>' +
+        '<th style="padding:8px;">التاريخ</th>' +
+        '<th style="padding:8px;">الحضور</th>' +
+        '<th style="padding:8px;">الالتزام</th>' +
+        '<th style="padding:8px;">الكتاب المقدس</th>' +
+        '<th style="padding:8px;">الحفظ</th>' +
+        '<th style="padding:8px;">اجزاء الحفظ</th>' +
+        '<th style="padding:8px;">الموبايل</th>' +
+        '<th style="padding:8px;">الترانيم</th>' +
+        '<th style="padding:8px;">الالعاب</th>' +
+        '<th style="padding:8px;">المسابقه</th>' +
+        '<th style="padding:8px;">المشروع</th>' +
+        '<th style="padding:8px;">درجه الكويز</th>' +
+        '</tr></thead><tbody>';
+    evals.sort((a, b) => (b.eval_date || '').localeCompare(a.eval_date || ''));
+    for (const e of evals) {
+        html += '<tr>' +
+            `<td style="padding:8px;">${e.eval_date || ''}</td>` +
+            `<td style="padding:8px;">${e.attendance || ''}</td>` +
+            `<td style="padding:8px;">${e.commitment || ''}</td>` +
+            `<td style="padding:8px;">${e.bible || ''}</td>` +
+            `<td style="padding:8px;">${e.memorization || ''}</td>` +
+            `<td style="padding:8px;">${e.memorization_parts || ''}</td>` +
+            `<td style="padding:8px;">${e.mobile || ''}</td>` +
+            `<td style="padding:8px;">${e.hymns || ''}</td>` +
+            `<td style="padding:8px;">${e.games || ''}</td>` +
+            `<td style="padding:8px;">${e.competition || ''}</td>` +
+            `<td style="padding:8px;">${e.project || ''}</td>` +
+            `<td style="padding:8px;">${e.quiz_grade || ''}</td>` +
+            '</tr>';
+    }
+    html += '</tbody></table>';
+    tableDiv.innerHTML = html;
 }
 
 // Dashboard functions

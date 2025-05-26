@@ -517,50 +517,67 @@
         <div id="evaluation-form">
             <h3>التقييم</h3>
             <div class="form-group">
-                <label for="attendance">الحضور:</label>
-                <select id="attendance" class="eval-dropdown"></select>
+                <label for="evaluation-date">تاريخ التقييم:</label>
+                <input type="date" id="evaluation-date" class="eval-date" style="margin-bottom: 15px;" />
             </div>
-            <div class="form-group">
-                <label for="commitment">الالتزام:</label>
-                <select id="commitment" class="eval-dropdown"></select>
+            <div class="eval-fields" style="display: flex; flex-wrap: wrap; gap: 16px;">
+                <div style="flex: 1 1 220px; min-width: 180px;">
+                    <label for="attendance">الحضور:</label>
+                    <select id="attendance" class="eval-dropdown"></select>
+                </div>
+                <div style="flex: 1 1 220px; min-width: 180px;">
+                    <label for="commitment">الالتزام:</label>
+                    <select id="commitment" class="eval-dropdown"></select>
+                </div>
+                <div style="flex: 1 1 220px; min-width: 180px;">
+                    <label for="bible">الكتاب المقدس:</label>
+                    <select id="bible" class="eval-dropdown"></select>
+                </div>
+                <div style="flex: 1 1 220px; min-width: 180px;">
+                    <label for="memorization">الحفظ:</label>
+                    <select id="memorization" class="eval-dropdown"></select>
+                </div>
+                <div style="flex: 1 1 220px; min-width: 180px;">
+                    <label for="memorization_parts">اجزاء الحفظ:</label>
+                    <select id="memorization_parts" class="eval-dropdown"></select>
+                </div>
+                <div style="flex: 1 1 220px; min-width: 180px;">
+                    <label for="mobile">الموبايل:</label>
+                    <select id="mobile" class="eval-dropdown"></select>
+                </div>
+                <div style="flex: 1 1 220px; min-width: 180px;">
+                    <label for="hymns">الترانيم:</label>
+                    <select id="hymns" class="eval-dropdown"></select>
+                </div>
+                <div style="flex: 1 1 220px; min-width: 180px;">
+                    <label for="games">الالعاب:</label>
+                    <select id="games" class="eval-dropdown"></select>
+                </div>
+                <div style="flex: 1 1 220px; min-width: 180px;">
+                    <label for="competition">المسابقه:</label>
+                    <select id="competition" class="eval-dropdown"></select>
+                </div>
+                <div style="flex: 1 1 220px; min-width: 180px;">
+                    <label for="project">المشروع:</label>
+                    <select id="project" class="eval-dropdown"></select>
+                </div>
+                <div style="flex: 1 1 220px; min-width: 180px;">
+                    <label for="quiz_grade">درجه الكويز:</label>
+                    <select id="quiz_grade" class="eval-dropdown"></select>
+                </div>
             </div>
-            <div class="form-group">
-                <label for="bible">الكتاب المقدس:</label>
-                <select id="bible" class="eval-dropdown"></select>
+            <button class="action-btn" id="save-evaluation" style="margin-top: 20px; width: 100%;">Save Evaluation</button>
+        </div>
+        <!-- Evaluation Filter and History -->
+        <div id="evaluation-history-section" style="margin-top: 30px;">
+            <h4>سجل التقييمات السابقة</h4>
+            <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px; flex-wrap: wrap;">
+                <input type="date" id="filter-eval-date" style="padding: 6px 10px; border-radius: 6px; border: 1px solid #ccc;" />
+                <input type="text" id="filter-eval-name" placeholder="بحث بالاسم" style="padding: 6px 10px; border-radius: 6px; border: 1px solid #ccc;" />
+                <button class="action-btn" id="apply-eval-filter" style="padding: 8px 18px;">تصفية</button>
+                <button class="action-btn" id="clear-eval-filter" style="padding: 8px 18px;">مسح التصفية</button>
             </div>
-            <div class="form-group">
-                <label for="memorization">الحفظ:</label>
-                <select id="memorization" class="eval-dropdown"></select>
-            </div>
-            <div class="form-group">
-                <label for="memorization_parts">اجزاء الحفظ:</label>
-                <select id="memorization_parts" class="eval-dropdown"></select>
-            </div>
-            <div class="form-group">
-                <label for="mobile">الموبايل:</label>
-                <select id="mobile" class="eval-dropdown"></select>
-            </div>
-            <div class="form-group">
-                <label for="hymns">الترانيم:</label>
-                <select id="hymns" class="eval-dropdown"></select>
-            </div>
-            <div class="form-group">
-                <label for="games">الالعاب:</label>
-                <select id="games" class="eval-dropdown"></select>
-            </div>
-            <div class="form-group">
-                <label for="competition">المسابقه:</label>
-                <select id="competition" class="eval-dropdown"></select>
-            </div>
-            <div class="form-group">
-                <label for="project">المشروع:</label>
-                <select id="project" class="eval-dropdown"></select>
-            </div>
-            <div class="form-group">
-                <label for="quiz_grade">درجه الكويز:</label>
-                <select id="quiz_grade" class="eval-dropdown"></select>
-            </div>
-            <button class="action-btn" id="save-evaluation">Save Evaluation</button>
+            <div id="evaluation-history-table" style="overflow-x: auto;"></div>
         </div>
     </div>
 </div>
@@ -569,28 +586,30 @@
 <div id="dashboard-section" class="section">
     <h2>Evaluation Options Dashboard</h2>
     <div class="dashboard-container">
-        <div class="form-group">
-            <label for="option-category">Category:</label>
-            <select id="option-category">
-                <option value="attendance">الحضور</option>
-                <option value="commitment">الالتزام</option>
-                <option value="bible">الكتاب المقدس</option>
-                <option value="memorization">الحفظ</option>
-                <option value="memorization_parts">اجزاء الحفظ</option>
-                <option value="mobile">الموبايل</option>
-                <option value="hymns">الترانيم</option>
-                <option value="games">الالعاب</option>
-                <option value="competition">المسابقه</option>
-                <option value="project">المشروع</option>
-                <option value="quiz_grade">درجه الكويز</option>
-            </select>
+        <div class="form-group" style="display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap;">
+            <div style="flex: 1 1 220px; min-width: 180px;">
+                <label for="option-category">Category:</label>
+                <select id="option-category">
+                    <option value="attendance">الحضور</option>
+                    <option value="commitment">الالتزام</option>
+                    <option value="bible">الكتاب المقدس</option>
+                    <option value="memorization">الحفظ</option>
+                    <option value="memorization_parts">اجزاء الحفظ</option>
+                    <option value="mobile">الموبايل</option>
+                    <option value="hymns">الترانيم</option>
+                    <option value="games">الالعاب</option>
+                    <option value="competition">المسابقه</option>
+                    <option value="project">المشروع</option>
+                    <option value="quiz_grade">درجه الكويز</option>
+                </select>
+            </div>
+            <div style="flex: 2 1 320px; min-width: 200px;">
+                <label for="option-value">Option Value:</label>
+                <input type="text" id="option-value" placeholder="Enter option value">
+            </div>
+            <button class="action-btn" id="add-option" style="height: 40px;">Add Option</button>
         </div>
-        <div class="form-group">
-            <label for="option-value">Option Value:</label>
-            <input type="text" id="option-value" placeholder="Enter option value">
-        </div>
-        <button class="action-btn" id="add-option">Add Option</button>
-        <div class="options-list">
+        <div class="options-list" style="margin-top: 20px;">
             <h3>Current Options</h3>
             <div id="options-container"></div>
         </div>
