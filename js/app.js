@@ -1,9 +1,9 @@
 // Initialize Database with enhanced structure
 const db = new Dexie('QRCodeDB');
-db.version(2).stores({
+db.version(3).stores({
     qrcodes: '++id, name, phone, created_date',
     scans: '++id, name, phone, scan_date, scan_time',
-    evaluations: '++id, qrcode_id, attendance, commitment, bible, memorization, mobile, hymns, games',
+    evaluations: '++id, qrcode_id, attendance, commitment, bible, memorization, memorization_parts, mobile, hymns, games, competition, project, quiz_grade',
     evaluation_options: '++id, category, value'
 });
 
@@ -614,19 +614,18 @@ async function showQRDetails(qrId) {
             showStatus('create-status', 'QR code not found', 'error');
             return;
         }
-        
-        // Get evaluation data if exists
+        // Get latest evaluation data if exists
         const evaluation = await db.evaluations
             .where('qrcode_id')
             .equals(qrId)
-            .first();
-        
+            .reverse()
+            .sortBy('id');
+        const latestEval = evaluation.length > 0 ? evaluation[evaluation.length - 1] : null;
         // Get scan history
         const scans = await db.scans
             .where('phone')
             .equals(qr.phone)
             .toArray();
-        
         // Populate details content
         const detailsContent = document.getElementById('qr-details-content');
         let scanHistoryHtml = '';
@@ -640,47 +639,38 @@ async function showQRDetails(qrId) {
         } else {
             scanHistoryHtml = '<p>No scan history available</p>';
         }
-        
         detailsContent.innerHTML = `
             <h3>${qr.name}</h3>
             <p><strong>Phone:</strong> ${qr.phone}</p>
             <p><strong>Created:</strong> ${qr.created_date || 'Unknown'}</p>
             ${scanHistoryHtml}
         `;
-        
-        // Load dropdown options
         await loadEvaluationOptions();
-        
         // Set current values if evaluation exists
-        if (evaluation) {
-            document.getElementById('attendance').value = evaluation.attendance || '';
-            document.getElementById('commitment').value = evaluation.commitment || '';
-            document.getElementById('bible').value = evaluation.bible || '';
-            document.getElementById('memorization').value = evaluation.memorization || '';
-            document.getElementById('mobile').value = evaluation.mobile || '';
-            document.getElementById('hymns').value = evaluation.hymns || '';
-            document.getElementById('games').value = evaluation.games || '';
+        if (latestEval) {
+            document.getElementById('attendance').value = latestEval.attendance || '';
+            document.getElementById('commitment').value = latestEval.commitment || '';
+            document.getElementById('bible').value = latestEval.bible || '';
+            document.getElementById('memorization').value = latestEval.memorization || '';
+            document.getElementById('memorization_parts').value = latestEval.memorization_parts || '';
+            document.getElementById('mobile').value = latestEval.mobile || '';
+            document.getElementById('hymns').value = latestEval.hymns || '';
+            document.getElementById('games').value = latestEval.games || '';
+            document.getElementById('competition').value = latestEval.competition || '';
+            document.getElementById('project').value = latestEval.project || '';
+            document.getElementById('quiz_grade').value = latestEval.quiz_grade || '';
         } else {
-            // Reset form
             document.querySelectorAll('.eval-dropdown').forEach(dropdown => {
                 dropdown.value = '';
             });
         }
-        
-        // Set up save button
         const saveBtn = document.getElementById('save-evaluation');
         saveBtn.onclick = () => saveEvaluation(qrId);
-        
-        // Show modal
         const modal = document.getElementById('qr-details-modal');
         modal.style.display = 'block';
-        
-        // Close modal when clicking X
         document.querySelector('.close-modal').onclick = () => {
             modal.style.display = 'none';
         };
-        
-        // Close modal when clicking outside
         window.onclick = (event) => {
             if (event.target === modal) {
                 modal.style.display = 'none';
@@ -695,17 +685,15 @@ async function showQRDetails(qrId) {
 // Load evaluation options into dropdowns
 async function loadEvaluationOptions() {
     try {
-        const categories = ['attendance', 'commitment', 'bible', 'memorization', 'mobile', 'hymns', 'games'];
-        
+        const categories = ['attendance', 'commitment', 'bible', 'memorization', 'memorization_parts', 'mobile', 'hymns', 'games', 'competition', 'project', 'quiz_grade'];
         for (const category of categories) {
             const dropdown = document.getElementById(category);
+            if (!dropdown) continue;
             dropdown.innerHTML = '<option value="">-- Select --</option>';
-            
             const options = await db.evaluation_options
                 .where('category')
                 .equals(category)
                 .toArray();
-            
             options.forEach(option => {
                 const optEl = document.createElement('option');
                 optEl.value = option.value;
@@ -725,25 +713,28 @@ async function saveEvaluation(qrId) {
         const commitment = document.getElementById('commitment').value;
         const bible = document.getElementById('bible').value;
         const memorization = document.getElementById('memorization').value;
+        const memorization_parts = document.getElementById('memorization_parts').value;
         const mobile = document.getElementById('mobile').value;
         const hymns = document.getElementById('hymns').value;
         const games = document.getElementById('games').value;
-
-        // Always add a new evaluation (append, do not update)
+        const competition = document.getElementById('competition').value;
+        const project = document.getElementById('project').value;
+        const quiz_grade = document.getElementById('quiz_grade').value;
         await db.evaluations.add({
             qrcode_id: qrId,
             attendance,
             commitment,
             bible,
             memorization,
+            memorization_parts,
             mobile,
             hymns,
-            games
+            games,
+            competition,
+            project,
+            quiz_grade
         });
-
         showStatus('create-status', 'Evaluation saved successfully!', 'success');
-
-        // Close modal
         document.getElementById('qr-details-modal').style.display = 'none';
     } catch (error) {
         console.error('Error saving evaluation:', error);
@@ -829,42 +820,43 @@ async function generateSummaryReport() {
         const qrcodes = await db.qrcodes.toArray();
         const scans = await db.scans.toArray();
         const evaluations = await db.evaluations.toArray();
-
         // Count total QR codes
         const totalQRCodes = qrcodes.length;
-
         // Count total scans
         const totalScans = scans.length;
-
         // Count unique scanned QR codes
         const uniqueScannedPhones = new Set(scans.map(scan => scan.phone));
         const uniqueScannedQRCodes = uniqueScannedPhones.size;
-
         // Count total evaluations
         const totalEvaluations = evaluations.length;
-
         // Calculate evaluation statistics (overall)
         const evalStats = {
             attendance: {},
             commitment: {},
             bible: {},
             memorization: {},
+            memorization_parts: {},
             mobile: {},
             hymns: {},
-            games: {}
+            games: {},
+            competition: {},
+            project: {},
+            quiz_grade: {}
         };
-
         // Count occurrences of each evaluation value (overall)
         evaluations.forEach(eval => {
             countEvalStat(evalStats.attendance, eval.attendance);
             countEvalStat(evalStats.commitment, eval.commitment);
             countEvalStat(evalStats.bible, eval.bible);
             countEvalStat(evalStats.memorization, eval.memorization);
+            countEvalStat(evalStats.memorization_parts, eval.memorization_parts);
             countEvalStat(evalStats.mobile, eval.mobile);
             countEvalStat(evalStats.hymns, eval.hymns);
             countEvalStat(evalStats.games, eval.games);
+            countEvalStat(evalStats.competition, eval.competition);
+            countEvalStat(evalStats.project, eval.project);
+            countEvalStat(evalStats.quiz_grade, eval.quiz_grade);
         });
-
         // Per QR code evaluation summary
         let perQRHtml = '';
         for (const qr of qrcodes) {
@@ -876,18 +868,26 @@ async function generateSummaryReport() {
                 commitment: {},
                 bible: {},
                 memorization: {},
+                memorization_parts: {},
                 mobile: {},
                 hymns: {},
-                games: {}
+                games: {},
+                competition: {},
+                project: {},
+                quiz_grade: {}
             };
             qrEvals.forEach(eval => {
                 countEvalStat(perStat.attendance, eval.attendance);
                 countEvalStat(perStat.commitment, eval.commitment);
                 countEvalStat(perStat.bible, eval.bible);
                 countEvalStat(perStat.memorization, eval.memorization);
+                countEvalStat(perStat.memorization_parts, eval.memorization_parts);
                 countEvalStat(perStat.mobile, eval.mobile);
                 countEvalStat(perStat.hymns, eval.hymns);
                 countEvalStat(perStat.games, eval.games);
+                countEvalStat(perStat.competition, eval.competition);
+                countEvalStat(perStat.project, eval.project);
+                countEvalStat(perStat.quiz_grade, eval.quiz_grade);
             });
             perQRHtml += `
                 <div class="summary-item">
@@ -897,14 +897,17 @@ async function generateSummaryReport() {
                         الالتزام: ${Object.entries(perStat.commitment).map(([v, c]) => `${v}: ${c}`).join(', ') || 'No data'}<br>
                         الكتاب المقدس: ${Object.entries(perStat.bible).map(([v, c]) => `${v}: ${c}`).join(', ') || 'No data'}<br>
                         الحفظ: ${Object.entries(perStat.memorization).map(([v, c]) => `${v}: ${c}`).join(', ') || 'No data'}<br>
+                        اجزاء الحفظ: ${Object.entries(perStat.memorization_parts).map(([v, c]) => `${v}: ${c}`).join(', ') || 'No data'}<br>
                         الموبايل: ${Object.entries(perStat.mobile).map(([v, c]) => `${v}: ${c}`).join(', ') || 'No data'}<br>
                         الترانيم: ${Object.entries(perStat.hymns).map(([v, c]) => `${v}: ${c}`).join(', ') || 'No data'}<br>
-                        الالعاب: ${Object.entries(perStat.games).map(([v, c]) => `${v}: ${c}`).join(', ') || 'No data'}
+                        الالعاب: ${Object.entries(perStat.games).map(([v, c]) => `${v}: ${c}`).join(', ') || 'No data'}<br>
+                        المسابقه: ${Object.entries(perStat.competition).map(([v, c]) => `${v}: ${c}`).join(', ') || 'No data'}<br>
+                        المشروع: ${Object.entries(perStat.project).map(([v, c]) => `${v}: ${c}`).join(', ') || 'No data'}<br>
+                        درجه الكويز: ${Object.entries(perStat.quiz_grade).map(([v, c]) => `${v}: ${c}`).join(', ') || 'No data'}
                     </span>
                 </div>
             `;
         }
-
         // Generate HTML for summary report
         const summaryHtml = `
             <div class="summary-report">
@@ -930,19 +933,21 @@ async function generateSummaryReport() {
                 ${generateEvalStatHtml('الالتزام', evalStats.commitment)}
                 ${generateEvalStatHtml('الكتاب المقدس', evalStats.bible)}
                 ${generateEvalStatHtml('الحفظ', evalStats.memorization)}
+                ${generateEvalStatHtml('اجزاء الحفظ', evalStats.memorization_parts)}
                 ${generateEvalStatHtml('الموبايل', evalStats.mobile)}
                 ${generateEvalStatHtml('الترانيم', evalStats.hymns)}
                 ${generateEvalStatHtml('الالعاب', evalStats.games)}
+                ${generateEvalStatHtml('المسابقه', evalStats.competition)}
+                ${generateEvalStatHtml('المشروع', evalStats.project)}
+                ${generateEvalStatHtml('درجه الكويز', evalStats.quiz_grade)}
                 <h4>Per QR Code Evaluation Summary</h4>
                 ${perQRHtml || '<div class="summary-item">No evaluations per QR code yet.</div>'}
             </div>
         `;
-
         // Display summary report
         const summaryContainer = document.getElementById('summary-container');
         summaryContainer.innerHTML = summaryHtml;
         summaryContainer.style.display = 'block';
-
         showStatus('create-status', 'Summary report generated!', 'success');
     } catch (error) {
         console.error('Error generating summary report:', error);
@@ -957,7 +962,7 @@ async function exportSummaryToExcel() {
         const evaluations = await db.evaluations.toArray();
         // Header
         const rows = [
-            ['Name', 'Phone', 'Created Date', 'Evaluation #', 'الحضور', 'الالتزام', 'الكتاب المقدس', 'الحفظ', 'الموبايل', 'الترانيم', 'الالعاب']
+            ['Name', 'Phone', 'Created Date', 'Evaluation #', 'الحضور', 'الالتزام', 'الكتاب المقدس', 'الحفظ', 'اجزاء الحفظ', 'الموبايل', 'الترانيم', 'الالعاب', 'المسابقه', 'المشروع', 'درجه الكويز']
         ];
         for (const qr of qrcodes) {
             const qrEvals = evaluations.filter(e => e.qrcode_id === qr.id);
@@ -966,7 +971,7 @@ async function exportSummaryToExcel() {
                     qr.name || '',
                     qr.phone || '',
                     qr.created_date || '',
-                    '', '', '', '', '', '', '', ''
+                    '', '', '', '', '', '', '', '', '', '', '', ''
                 ]);
             } else {
                 qrEvals.forEach((evaluation, idx) => {
@@ -979,9 +984,13 @@ async function exportSummaryToExcel() {
                         evaluation.commitment || '',
                         evaluation.bible || '',
                         evaluation.memorization || '',
+                        evaluation.memorization_parts || '',
                         evaluation.mobile || '',
                         evaluation.hymns || '',
-                        evaluation.games || ''
+                        evaluation.games || '',
+                        evaluation.competition || '',
+                        evaluation.project || '',
+                        evaluation.quiz_grade || ''
                     ]);
                 });
             }
@@ -1171,11 +1180,11 @@ document.addEventListener('DOMContentLoaded', function() {
     db.open().then(() => {
         console.log('Database opened successfully');
         // Upgrade database if needed
-        if (db.verno < 2) {
-            db.version(2).stores({
+        if (db.verno < 3) {
+            db.version(3).stores({
                 qrcodes: '++id, name, phone, created_date',
                 scans: '++id, name, phone, scan_date, scan_time',
-                evaluations: '++id, qrcode_id, attendance, commitment, bible, memorization, mobile, hymns, games',
+                evaluations: '++id, qrcode_id, attendance, commitment, bible, memorization, memorization_parts, mobile, hymns, games, competition, project, quiz_grade',
                 evaluation_options: '++id, category, value'
             });
         }
