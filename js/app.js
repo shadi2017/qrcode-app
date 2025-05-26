@@ -676,16 +676,10 @@ async function showQRDetails(qrId) {
             document.getElementById('filter-eval-date').value = '';
             document.getElementById('filter-eval-name').value = '';
             renderEvaluationHistory(qrId);
-        }; 
-        // Open Bootstrap modal
-        const modalEl = document.getElementById('qr-details-modal');
-        if (window.bootstrap && window.bootstrap.Modal) {
-            const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
-            modal.show();
-        } else {
-            // fallback for non-bootstrap
-            modalEl.style.display = 'block';
-        }
+        };
+        // Show Bootstrap modal
+        const modal = new bootstrap.Modal(document.getElementById('qr-details-modal'));
+        modal.show();
     } catch (error) {
         console.error('Error showing QR details:', error);
         showStatus('create-status', 'Error loading QR details', 'error');
@@ -747,7 +741,9 @@ async function saveEvaluation(qrId) {
             eval_date: evalDate
         });
         showStatus('create-status', 'Evaluation saved successfully!', 'success');
-        document.getElementById('qr-details-modal').style.display = 'none';
+        // Hide Bootstrap modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('qr-details-modal'));
+        if (modal) modal.hide();
     } catch (error) {
         console.error('Error saving evaluation:', error);
         showStatus('create-status', 'Error saving evaluation', 'error');
@@ -776,36 +772,36 @@ async function renderEvaluationHistory(qrId) {
         tableDiv.innerHTML = '<div style="text-align:center; color:#888;">لا يوجد تقييمات سابقة</div>';
         return;
     }
-    let html = '<table style="width:100%; border-collapse:collapse; background:#fff; border-radius:8px; overflow:hidden; box-shadow:0 2px 5px rgba(0,0,0,0.05);">';
+    let html = '<table class="table table-dark table-striped table-bordered">';
     html += '<thead><tr>' +
-        '<th style="padding:8px;">التاريخ</th>' +
-        '<th style="padding:8px;">الحضور</th>' +
-        '<th style="padding:8px;">الالتزام</th>' +
-        '<th style="padding:8px;">الكتاب المقدس</th>' +
-        '<th style="padding:8px;">الحفظ</th>' +
-        '<th style="padding:8px;">اجزاء الحفظ</th>' +
-        '<th style="padding:8px;">الموبايل</th>' +
-        '<th style="padding:8px;">الترانيم</th>' +
-        '<th style="padding:8px;">الالعاب</th>' +
-        '<th style="padding:8px;">المسابقه</th>' +
-        '<th style="padding:8px;">المشروع</th>' +
-        '<th style="padding:8px;">درجه الكويز</th>' +
+        '<th>التاريخ</th>' +
+        '<th>الحضور</th>' +
+        '<th>الالتزام</th>' +
+        '<th>الكتاب المقدس</th>' +
+        '<th>الحفظ</th>' +
+        '<th>اجزاء الحفظ</th>' +
+        '<th>الموبايل</th>' +
+        '<th>الترانيم</th>' +
+        '<th>الالعاب</th>' +
+        '<th>المسابقه</th>' +
+        '<th>المشروع</th>' +
+        '<th>درجه الكويز</th>' +
         '</tr></thead><tbody>';
     evals.sort((a, b) => (b.eval_date || '').localeCompare(a.eval_date || ''));
     for (const e of evals) {
         html += '<tr>' +
-            `<td style="padding:8px;">${e.eval_date || ''}</td>` +
-            `<td style="padding:8px;">${e.attendance || ''}</td>` +
-            `<td style="padding:8px;">${e.commitment || ''}</td>` +
-            `<td style="padding:8px;">${e.bible || ''}</td>` +
-            `<td style="padding:8px;">${e.memorization || ''}</td>` +
-            `<td style="padding:8px;">${e.memorization_parts || ''}</td>` +
-            `<td style="padding:8px;">${e.mobile || ''}</td>` +
-            `<td style="padding:8px;">${e.hymns || ''}</td>` +
-            `<td style="padding:8px;">${e.games || ''}</td>` +
-            `<td style="padding:8px;">${e.competition || ''}</td>` +
-            `<td style="padding:8px;">${e.project || ''}</td>` +
-            `<td style="padding:8px;">${e.quiz_grade || ''}</td>` +
+            `<td>${e.eval_date || ''}</td>` +
+            `<td>${e.attendance || ''}</td>` +
+            `<td>${e.commitment || ''}</td>` +
+            `<td>${e.bible || ''}</td>` +
+            `<td>${e.memorization || ''}</td>` +
+            `<td>${e.memorization_parts || ''}</td>` +
+            `<td>${e.mobile || ''}</td>` +
+            `<td>${e.hymns || ''}</td>` +
+            `<td>${e.games || ''}</td>` +
+            `<td>${e.competition || ''}</td>` +
+            `<td>${e.project || ''}</td>` +
+            `<td>${e.quiz_grade || ''}</td>` +
             '</tr>';
     }
     html += '</tbody></table>';
@@ -817,21 +813,19 @@ async function loadDashboard() {
     try {
         const optionsContainer = document.getElementById('options-container');
         optionsContainer.innerHTML = '';
-        
         const category = document.getElementById('option-category').value;
         const options = await db.evaluation_options
             .where('category')
             .equals(category)
             .toArray();
-        
         options.forEach(option => {
-            const optionEl = document.createElement('div');
-            optionEl.className = 'option-item';
-            optionEl.innerHTML = `
+            const li = document.createElement('li');
+            li.className = 'list-group-item d-flex justify-content-between align-items-center';
+            li.innerHTML = `
                 <span>${option.value}</span>
-                <button onclick="deleteOption(${option.id})">&times;</button>
+                <button class="btn btn-danger btn-sm ms-2" onclick="deleteOption(${option.id})">&times;</button>
             `;
-            optionsContainer.appendChild(optionEl);
+            optionsContainer.appendChild(li);
         });
     } catch (error) {
         console.error('Error loading dashboard:', error);
