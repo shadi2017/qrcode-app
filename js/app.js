@@ -662,6 +662,18 @@ async function exportAllQRCodesToPDF() {
 // --- Modal Logic for QR Details & Evaluation ---
 let currentQRDetail = null;
 
+window.openQRDetailModal = openQRDetailModal;
+window.closeQRDetailModal = closeQRDetailModal;
+window.saveEvaluation = saveEvaluation;
+window.loadDropdownOptionsForForm = loadDropdownOptionsForForm;
+
+// --- Dropdown Dashboard Logic ---
+const evalKeys = ['الحضور', 'الالتزام', 'الكتاب المقدس', 'الحفظ', 'الموبايل', 'الترانيم', 'الالعاب'];
+
+window.addDropdownOption = addDropdownOption;
+window.removeDropdownOption = removeDropdownOption;
+window.renderDropdownDashboard = renderDropdownDashboard;
+
 function openQRDetailModal(qr) {
     currentQRDetail = qr;
     // Fill modal content
@@ -733,8 +745,6 @@ async function loadDropdownOptionsForForm() {
 }
 
 // --- Dropdown Dashboard Logic ---
-const evalKeys = ['الحضور', 'الالتزام', 'الكتاب المقدس', 'الحفظ', 'الموبايل', 'الترانيم', 'الالعاب'];
-
 async function renderDropdownDashboard() {
     const dash = document.getElementById('dropdown-dashboard');
     dash.innerHTML = '';
@@ -769,6 +779,84 @@ async function removeDropdownOption(key, idx) {
     entry.options.splice(idx, 1);
     await db.dropdownOptions.put(entry);
     renderDropdownDashboard();
+}
+
+// --- Final Report Logic ---
+window.showFinalReportModal = showFinalReportModal;
+window.closeFinalReportModal = closeFinalReportModal;
+window.exportFinalReportToExcel = exportFinalReportToExcel;
+
+async function showFinalReportModal() {
+    // Gather all evaluations and qrcodes
+    const qrcodes = await db.qrcodes.toArray();
+    const evaluations = await db.evaluations.toArray();
+    const keys = evalKeys;
+    // Build a map: phone/id -> all evaluations
+    const evalMap = {};
+    for (const evalItem of evaluations) {
+        if (!evalMap[evalItem.phone]) evalMap[evalItem.phone] = [];
+        evalMap[evalItem.phone].push(evalItem);
+    }
+    // Build table rows
+    let tableHtml = '<table class="report-table" style="min-width:800px;"><thead><tr><th>Name</th><th>Phone</th>';
+    for (const k of keys) tableHtml += `<th>${k}</th>`;
+    tableHtml += '</tr></thead><tbody>';
+    // Sums
+    const sumCounts = {};
+    for (const k of keys) sumCounts[k] = {};
+    for (const qr of qrcodes) {
+        tableHtml += `<tr><td>${qr.name}</td><td>${qr.phone}</td>`;
+        let lastEval = null;
+        if (evalMap[qr.phone] && evalMap[qr.phone].length) {
+            // Use the last evaluation for this QR
+            lastEval = evalMap[qr.phone][evalMap[qr.phone].length - 1];
+        }
+        for (const k of keys) {
+            let val = lastEval && lastEval.values && lastEval.values[k] ? lastEval.values[k] : '';
+            tableHtml += `<td>${val}</td>`;
+            if (val) {
+                if (!sumCounts[k][val]) sumCounts[k][val] = 0;
+                sumCounts[k][val]++;
+            }
+        }
+        tableHtml += '</tr>';
+    }
+    // Add sum row
+    tableHtml += '<tr style="background:#f8f9fa;font-weight:bold;"><td colspan="2">Total</td>';
+    for (const k of keys) {
+        let sumText = Object.entries(sumCounts[k]).map(([v, c]) => `${v}: ${c}`).join(' | ');
+        tableHtml += `<td>${sumText}</td>`;
+    }
+    tableHtml += '</tr>';
+    tableHtml += '</tbody></table>';
+    document.getElementById('final-report-table-container').innerHTML = tableHtml;
+    document.getElementById('final-report-modal').style.display = 'flex';
+}
+
+function closeFinalReportModal() {
+    document.getElementById('final-report-modal').style.display = 'none';
+}
+
+function exportFinalReportToExcel() {
+    const table = document.querySelector('#final-report-table-container table');
+    if (!table) return;
+    let rows = [];
+    for (const tr of table.querySelectorAll('tr')) {
+        const cells = Array.from(tr.querySelectorAll('th,td')).map(td => td.textContent);
+        rows.push(cells);
+    }
+    if (rows.length === 0) return;
+    const csvContent = rows.map(e => e.map(v => `"${v.replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `final_report_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    showStatus('create-status', 'Final report exported as Excel (CSV) file!', 'success');
 }
 
 // Initialize app

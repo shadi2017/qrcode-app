@@ -460,6 +460,7 @@
             
             <div id="scan-count"></div>
             <button class="export-btn" onclick="exportReportsToExcel()">Export Reports to Excel</button>
+            <button class="export-btn" onclick="showFinalReportModal()">Final Report</button>
         </div>
 
         <!-- All QR Codes Section -->
@@ -507,6 +508,16 @@
                     <div class="form-group"><label>الالعاب</label><select id="eval-الالعاب" name="الالعاب"></select></div>
                     <button type="submit" class="action-btn" style="width:100%;margin-top:10px;">حفظ التقييم</button>
                 </form>
+            </div>
+        </div>
+
+        <!-- Final Report Modal -->
+        <div id="final-report-modal" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;">
+            <div style="background:#fff;padding:30px 20px 20px 20px;border-radius:12px;max-width:900px;margin:60px auto;position:relative;">
+                <button onclick="closeFinalReportModal()" style="position:absolute;top:10px;right:10px;font-size:20px;background:none;border:none;cursor:pointer;">&times;</button>
+                <h2 style="text-align:center;">Final Evaluation Report</h2>
+                <div id="final-report-table-container" style="overflow-x:auto;"></div>
+                <button class="export-btn" onclick="exportFinalReportToExcel()">Export Final Report to Excel</button>
             </div>
         </div>
     </div>
