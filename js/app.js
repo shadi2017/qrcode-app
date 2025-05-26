@@ -21,6 +21,14 @@ function showSection(sectionName) {
         btn.classList.remove('active');
     });
     
+    // Hide dashboard-section explicitly
+    const dashboardSection = document.getElementById('dashboard-section');
+    if (dashboardSection) dashboardSection.classList.remove('active');
+    
+    // Hide QR details modal explicitly
+    const qrDetailsModal = document.getElementById('qr-details-modal');
+    if (qrDetailsModal) qrDetailsModal.style.display = 'none';
+    
     // Show selected section
     document.getElementById(sectionName + '-section').classList.add('active');
     
