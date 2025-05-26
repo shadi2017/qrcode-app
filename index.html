@@ -560,10 +560,14 @@
             <input type="text" id="option-value" placeholder="Enter option value">
         </div>
         <button class="action-btn" id="add-option">Add Option</button>
-        
         <div class="options-list">
             <h3>Current Options</h3>
             <div id="options-container"></div>
+        </div>
+        <div class="export-section">
+            <button class="export-btn" onclick="exportEvaluationData()">Export Evaluation Data</button>
+            <input type="file" id="import-eval-file" accept=".json" style="display:none" onchange="importEvaluationData(event)">
+            <button class="export-btn" onclick="document.getElementById('import-eval-file').click()">Import Evaluation Data</button>
         </div>
     </div>
 </div>

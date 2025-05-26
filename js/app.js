@@ -1037,6 +1037,60 @@ function generateEvalStatHtml(title, statObj) {
     `;
 }
 
+// Export evaluation options and evaluations as JSON
+async function exportEvaluationData() {
+    try {
+        const evaluationOptions = await db.evaluation_options.toArray();
+        const evaluations = await db.evaluations.toArray();
+        const data = {
+            evaluation_options: evaluationOptions,
+            evaluations: evaluations,
+            exportDate: new Date().toISOString()
+        };
+        const dataStr = JSON.stringify(data, null, 2);
+        const blob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.download = `evaluation_data_${new Date().toISOString().split('T')[0]}.json`;
+        link.href = url;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        showStatus('create-status', 'Evaluation data exported successfully!', 'success');
+    } catch (error) {
+        console.error('Error exporting evaluation data:', error);
+        showStatus('create-status', 'Error exporting evaluation data', 'error');
+    }
+}
+
+// Import evaluation options and evaluations from JSON
+async function importEvaluationData(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+        // Optionally clear existing data, or merge
+        await db.evaluation_options.clear();
+        await db.evaluations.clear();
+        if (Array.isArray(data.evaluation_options)) {
+            for (const opt of data.evaluation_options) {
+                await db.evaluation_options.add(opt);
+            }
+        }
+        if (Array.isArray(data.evaluations)) {
+            for (const evalObj of data.evaluations) {
+                await db.evaluations.add(evalObj);
+            }
+        }
+        showStatus('create-status', 'Evaluation data imported successfully!', 'success');
+        loadDashboard();
+    } catch (error) {
+        showStatus('create-status', 'Error importing evaluation data', 'error');
+    }
+}
+
 // Initialize app
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize database
