@@ -570,7 +570,7 @@
                 <!-- Evaluation Filter and History -->
                 <div id="evaluation-history-section" class="mb-2">
                     <h5 class="mb-3">سجل التقييمات السابقة</h5>
-                    <form class="row g-2 align-items-end mb-3">
+                    <form class="row g-2 align-items-end mb-3" onsubmit="return false;">
                         <div class="col-md-4">
                             <input type="date" id="filter-eval-date" class="form-control" />
                         </div>
@@ -584,7 +584,7 @@
                             <button type="button" class="btn btn-secondary" id="clear-eval-filter">مسح التصفية</button>
                         </div>
                     </form>
-                    <div id="evaluation-history-table" class="table-responsive"></div>
+                    <div id="evaluation-history-table"></div>
                 </div>
             </div>
         </div>
