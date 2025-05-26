@@ -676,17 +676,16 @@ async function showQRDetails(qrId) {
             document.getElementById('filter-eval-date').value = '';
             document.getElementById('filter-eval-name').value = '';
             renderEvaluationHistory(qrId);
-        };
-        const modal = document.getElementById('qr-details-modal');
-        modal.style.display = 'block';
-        document.querySelector('.close-modal').onclick = () => {
-            modal.style.display = 'none';
-        };
-        window.onclick = (event) => {
-            if (event.target === modal) {
-                modal.style.display = 'none';
-            }
-        };
+        }; 
+        // Open Bootstrap modal
+        const modalEl = document.getElementById('qr-details-modal');
+        if (window.bootstrap && window.bootstrap.Modal) {
+            const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+            modal.show();
+        } else {
+            // fallback for non-bootstrap
+            modalEl.style.display = 'block';
+        }
     } catch (error) {
         console.error('Error showing QR details:', error);
         showStatus('create-status', 'Error loading QR details', 'error');
