@@ -720,40 +720,21 @@ async function saveEvaluation(qrId) {
         const mobile = document.getElementById('mobile').value;
         const hymns = document.getElementById('hymns').value;
         const games = document.getElementById('games').value;
-        
-        // Check if evaluation already exists
-        const existingEval = await db.evaluations
-            .where('qrcode_id')
-            .equals(qrId)
-            .first();
-        
-        if (existingEval) {
-            // Update existing evaluation
-            await db.evaluations.update(existingEval.id, {
-                attendance,
-                commitment,
-                bible,
-                memorization,
-                mobile,
-                hymns,
-                games
-            });
-        } else {
-            // Create new evaluation
-            await db.evaluations.add({
-                qrcode_id: qrId,
-                attendance,
-                commitment,
-                bible,
-                memorization,
-                mobile,
-                hymns,
-                games
-            });
-        }
-        
+
+        // Always add a new evaluation (append, do not update)
+        await db.evaluations.add({
+            qrcode_id: qrId,
+            attendance,
+            commitment,
+            bible,
+            memorization,
+            mobile,
+            hymns,
+            games
+        });
+
         showStatus('create-status', 'Evaluation saved successfully!', 'success');
-        
+
         // Close modal
         document.getElementById('qr-details-modal').style.display = 'none';
     } catch (error) {
@@ -846,18 +827,21 @@ async function generateSummaryReport() {
         const qrcodes = await db.qrcodes.toArray();
         const scans = await db.scans.toArray();
         const evaluations = await db.evaluations.toArray();
-        
+
         // Count total QR codes
         const totalQRCodes = qrcodes.length;
-        
+
         // Count total scans
         const totalScans = scans.length;
-        
+
         // Count unique scanned QR codes
         const uniqueScannedPhones = new Set(scans.map(scan => scan.phone));
         const uniqueScannedQRCodes = uniqueScannedPhones.size;
-        
-        // Calculate evaluation statistics
+
+        // Count total evaluations
+        const totalEvaluations = evaluations.length;
+
+        // Calculate evaluation statistics (overall)
         const evalStats = {
             attendance: {},
             commitment: {},
@@ -867,8 +851,8 @@ async function generateSummaryReport() {
             hymns: {},
             games: {}
         };
-        
-        // Count occurrences of each evaluation value
+
+        // Count occurrences of each evaluation value (overall)
         evaluations.forEach(eval => {
             countEvalStat(evalStats.attendance, eval.attendance);
             countEvalStat(evalStats.commitment, eval.commitment);
@@ -878,29 +862,68 @@ async function generateSummaryReport() {
             countEvalStat(evalStats.hymns, eval.hymns);
             countEvalStat(evalStats.games, eval.games);
         });
-        
+
+        // Per QR code evaluation summary
+        let perQRHtml = '';
+        for (const qr of qrcodes) {
+            const qrEvals = evaluations.filter(e => e.qrcode_id === qr.id);
+            if (qrEvals.length === 0) continue;
+            // Count per value for this QR
+            const perStat = {
+                attendance: {},
+                commitment: {},
+                bible: {},
+                memorization: {},
+                mobile: {},
+                hymns: {},
+                games: {}
+            };
+            qrEvals.forEach(eval => {
+                countEvalStat(perStat.attendance, eval.attendance);
+                countEvalStat(perStat.commitment, eval.commitment);
+                countEvalStat(perStat.bible, eval.bible);
+                countEvalStat(perStat.memorization, eval.memorization);
+                countEvalStat(perStat.mobile, eval.mobile);
+                countEvalStat(perStat.hymns, eval.hymns);
+                countEvalStat(perStat.games, eval.games);
+            });
+            perQRHtml += `
+                <div class="summary-item">
+                    <span><b>${qr.name} (${qr.phone})</b> - Total Evaluations: ${qrEvals.length}</span>
+                    <span>
+                        الحضور: ${Object.entries(perStat.attendance).map(([v, c]) => `${v}: ${c}`).join(', ') || 'No data'}<br>
+                        الالتزام: ${Object.entries(perStat.commitment).map(([v, c]) => `${v}: ${c}`).join(', ') || 'No data'}<br>
+                        الكتاب المقدس: ${Object.entries(perStat.bible).map(([v, c]) => `${v}: ${c}`).join(', ') || 'No data'}<br>
+                        الحفظ: ${Object.entries(perStat.memorization).map(([v, c]) => `${v}: ${c}`).join(', ') || 'No data'}<br>
+                        الموبايل: ${Object.entries(perStat.mobile).map(([v, c]) => `${v}: ${c}`).join(', ') || 'No data'}<br>
+                        الترانيم: ${Object.entries(perStat.hymns).map(([v, c]) => `${v}: ${c}`).join(', ') || 'No data'}<br>
+                        الالعاب: ${Object.entries(perStat.games).map(([v, c]) => `${v}: ${c}`).join(', ') || 'No data'}
+                    </span>
+                </div>
+            `;
+        }
+
         // Generate HTML for summary report
         const summaryHtml = `
             <div class="summary-report">
                 <h3>Summary Report</h3>
-                
                 <div class="summary-item">
                     <span>Total QR Codes:</span>
                     <span>${totalQRCodes}</span>
                 </div>
-                
                 <div class="summary-item">
                     <span>Total Scans:</span>
                     <span>${totalScans}</span>
                 </div>
-                
                 <div class="summary-item">
                     <span>Unique Scanned QR Codes:</span>
                     <span>${uniqueScannedQRCodes}</span>
                 </div>
-                
-                <h4>Evaluation Statistics</h4>
-                
+                <div class="summary-item">
+                    <span>Total Evaluations:</span>
+                    <span>${totalEvaluations}</span>
+                </div>
+                <h4>Evaluation Statistics (All QR Codes)</h4>
                 ${generateEvalStatHtml('الحضور', evalStats.attendance)}
                 ${generateEvalStatHtml('الالتزام', evalStats.commitment)}
                 ${generateEvalStatHtml('الكتاب المقدس', evalStats.bible)}
@@ -908,18 +931,75 @@ async function generateSummaryReport() {
                 ${generateEvalStatHtml('الموبايل', evalStats.mobile)}
                 ${generateEvalStatHtml('الترانيم', evalStats.hymns)}
                 ${generateEvalStatHtml('الالعاب', evalStats.games)}
+                <h4>Per QR Code Evaluation Summary</h4>
+                ${perQRHtml || '<div class="summary-item">No evaluations per QR code yet.</div>'}
             </div>
         `;
-        
+
         // Display summary report
         const summaryContainer = document.getElementById('summary-container');
         summaryContainer.innerHTML = summaryHtml;
         summaryContainer.style.display = 'block';
-        
+
         showStatus('create-status', 'Summary report generated!', 'success');
     } catch (error) {
         console.error('Error generating summary report:', error);
         showStatus('create-status', 'Error generating summary report', 'error');
+    }
+}
+
+// Export summary report to Excel (all evaluations per QR code)
+async function exportSummaryToExcel() {
+    try {
+        const qrcodes = await db.qrcodes.toArray();
+        const evaluations = await db.evaluations.toArray();
+        // Header
+        const rows = [
+            ['Name', 'Phone', 'Created Date', 'Evaluation #', 'الحضور', 'الالتزام', 'الكتاب المقدس', 'الحفظ', 'الموبايل', 'الترانيم', 'الالعاب']
+        ];
+        for (const qr of qrcodes) {
+            const qrEvals = evaluations.filter(e => e.qrcode_id === qr.id);
+            if (qrEvals.length === 0) {
+                rows.push([
+                    qr.name || '',
+                    qr.phone || '',
+                    qr.created_date || '',
+                    '', '', '', '', '', '', '', ''
+                ]);
+            } else {
+                qrEvals.forEach((evaluation, idx) => {
+                    rows.push([
+                        qr.name || '',
+                        qr.phone || '',
+                        qr.created_date || '',
+                        idx + 1,
+                        evaluation.attendance || '',
+                        evaluation.commitment || '',
+                        evaluation.bible || '',
+                        evaluation.memorization || '',
+                        evaluation.mobile || '',
+                        evaluation.hymns || '',
+                        evaluation.games || ''
+                    ]);
+                });
+            }
+        }
+        // Generate CSV content
+        const csvContent = rows.map(e => e.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+        // Create and download file
+        const blob = new Blob([csvContent], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `qr_summary_report_${new Date().toISOString().split('T')[0]}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        showStatus('create-status', 'Summary report exported as Excel (CSV) file!', 'success');
+    } catch (error) {
+        console.error('Error exporting summary report:', error);
+        showStatus('create-status', 'Error exporting summary report', 'error');
     }
 }
 
@@ -956,58 +1036,6 @@ function generateEvalStatHtml(title, statObj) {
         </div>
     `;
 }
-
-// Export summary report to Excel
-async function exportSummaryToExcel() {
-    try {
-        const qrcodes = await db.qrcodes.toArray();
-        const evaluations = await db.evaluations.toArray();
-        
-        // Create rows for Excel
-        const rows = [
-            ['Name', 'Phone', 'Created Date', 'الحضور', 'الالتزام', 'الكتاب المقدس', 'الحفظ', 'الموبايل', 'الترانيم', 'الالعاب']
-        ];
-        
-        // Map QR codes with their evaluations
-        for (const qr of qrcodes) {
-            const evaluation = evaluations.find(e => e.qrcode_id === qr.id) || {};
-            
-            rows.push([
-                qr.name || '',
-                qr.phone || '',
-                qr.created_date || '',
-                evaluation.attendance || '',
-                evaluation.commitment || '',
-                evaluation.bible || '',
-                evaluation.memorization || '',
-                evaluation.mobile || '',
-                evaluation.hymns || '',
-                evaluation.games || ''
-            ]);
-        }
-        
-        // Generate CSV content
-        const csvContent = rows.map(e => e.map(v => `"${v.replace(/"/g, '""')}"`).join(',')).join('\n');
-        
-        // Create and download file
-        const blob = new Blob([csvContent], { type: 'text/csv' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `qr_summary_report_${new Date().toISOString().split('T')[0]}.csv`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-        
-        showStatus('create-status', 'Summary report exported as Excel (CSV) file!', 'success');
-    } catch (error) {
-        console.error('Error exporting summary report:', error);
-        showStatus('create-status', 'Error exporting summary report', 'error');
-    }
-}
-
-// This function is already updated above
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', function() {
