@@ -497,77 +497,96 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
-<!-- Add this at the end of the body, before closing body tag -->
-<div id="qr-details-modal" class="modal">
-    <div class="modal-content">
-        <span class="close-modal">&times;</span>
-        <h2>QR Code Details</h2>
-        <div id="qr-details-content"></div>
-        
-        <div id="evaluation-form">
-            <h3>التقييم</h3>
-            <div class="form-group">
-                <label for="evaluation-date">تاريخ التقييم:</label>
-                <input type="date" id="evaluation-date" class="eval-date" style="margin-bottom: 15px;" />
+<!-- QR Code Details Modal (Bootstrap) -->
+<div id="qr-details-modal" class="modal fade" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">QR Code Details</h2>
+                <button type="button" class="btn-close close-modal" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="eval-fields" style="display: flex; flex-wrap: wrap; gap: 16px;">
-                <div style="flex: 1 1 220px; min-width: 180px;">
-                    <label for="attendance">الحضور:</label>
-                    <select id="attendance" class="eval-dropdown"></select>
-                </div>
-                <div style="flex: 1 1 220px; min-width: 180px;">
-                    <label for="commitment">الالتزام:</label>
-                    <select id="commitment" class="eval-dropdown"></select>
-                </div>
-                <div style="flex: 1 1 220px; min-width: 180px;">
-                    <label for="bible">الكتاب المقدس:</label>
-                    <select id="bible" class="eval-dropdown"></select>
-                </div>
-                <div style="flex: 1 1 220px; min-width: 180px;">
-                    <label for="memorization">الحفظ:</label>
-                    <select id="memorization" class="eval-dropdown"></select>
-                </div>
-                <div style="flex: 1 1 220px; min-width: 180px;">
-                    <label for="memorization_parts">اجزاء الحفظ:</label>
-                    <select id="memorization_parts" class="eval-dropdown"></select>
-                </div>
-                <div style="flex: 1 1 220px; min-width: 180px;">
-                    <label for="mobile">الموبايل:</label>
-                    <select id="mobile" class="eval-dropdown"></select>
-                </div>
-                <div style="flex: 1 1 220px; min-width: 180px;">
-                    <label for="hymns">الترانيم:</label>
-                    <select id="hymns" class="eval-dropdown"></select>
-                </div>
-                <div style="flex: 1 1 220px; min-width: 180px;">
-                    <label for="games">الالعاب:</label>
-                    <select id="games" class="eval-dropdown"></select>
-                </div>
-                <div style="flex: 1 1 220px; min-width: 180px;">
-                    <label for="competition">المسابقه:</label>
-                    <select id="competition" class="eval-dropdown"></select>
-                </div>
-                <div style="flex: 1 1 220px; min-width: 180px;">
-                    <label for="project">المشروع:</label>
-                    <select id="project" class="eval-dropdown"></select>
-                </div>
-                <div style="flex: 1 1 220px; min-width: 180px;">
-                    <label for="quiz_grade">درجه الكويز:</label>
-                    <select id="quiz_grade" class="eval-dropdown"></select>
+            <div class="modal-body">
+                <div id="qr-details-content" class="mb-4"></div>
+                <form id="evaluation-form" class="mb-4">
+                    <h4 class="mb-3">التقييم</h4>
+                    <div class="row g-3 align-items-end mb-3">
+                        <div class="col-md-4">
+                            <label for="evaluation-date" class="form-label">تاريخ التقييم:</label>
+                            <input type="date" id="evaluation-date" class="form-control" />
+                        </div>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label for="attendance" class="form-label">الحضور:</label>
+                            <select id="attendance" class="form-select eval-dropdown"></select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="commitment" class="form-label">الالتزام:</label>
+                            <select id="commitment" class="form-select eval-dropdown"></select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="bible" class="form-label">الكتاب المقدس:</label>
+                            <select id="bible" class="form-select eval-dropdown"></select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="memorization" class="form-label">الحفظ:</label>
+                            <select id="memorization" class="form-select eval-dropdown"></select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="memorization_parts" class="form-label">اجزاء الحفظ:</label>
+                            <select id="memorization_parts" class="form-select eval-dropdown"></select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="mobile" class="form-label">الموبايل:</label>
+                            <select id="mobile" class="form-select eval-dropdown"></select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="hymns" class="form-label">الترانيم:</label>
+                            <select id="hymns" class="form-select eval-dropdown"></select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="games" class="form-label">الالعاب:</label>
+                            <select id="games" class="form-select eval-dropdown"></select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="competition" class="form-label">المسابقه:</label>
+                            <select id="competition" class="form-select eval-dropdown"></select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="project" class="form-label">المشروع:</label>
+                            <select id="project" class="form-select eval-dropdown"></select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="quiz_grade" class="form-label">درجه الكويز:</label>
+                            <select id="quiz_grade" class="form-select eval-dropdown"></select>
+                        </div>
+                    </div>
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <button type="button" class="btn btn-success w-100" id="save-evaluation">Save Evaluation</button>
+                        </div>
+                    </div>
+                </form>
+                <!-- Evaluation Filter and History -->
+                <div id="evaluation-history-section" class="mb-2">
+                    <h5 class="mb-3">سجل التقييمات السابقة</h5>
+                    <form class="row g-2 align-items-end mb-3">
+                        <div class="col-md-4">
+                            <input type="date" id="filter-eval-date" class="form-control" />
+                        </div>
+                        <div class="col-md-4">
+                            <input type="text" id="filter-eval-name" class="form-control" placeholder="بحث بالاسم" />
+                        </div>
+                        <div class="col-md-2 d-grid">
+                            <button type="button" class="btn btn-primary" id="apply-eval-filter">تصفية</button>
+                        </div>
+                        <div class="col-md-2 d-grid">
+                            <button type="button" class="btn btn-secondary" id="clear-eval-filter">مسح التصفية</button>
+                        </div>
+                    </form>
+                    <div id="evaluation-history-table" class="table-responsive"></div>
                 </div>
             </div>
-            <button class="action-btn" id="save-evaluation" style="margin-top: 20px; width: 100%;">Save Evaluation</button>
-        </div>
-        <!-- Evaluation Filter and History -->
-        <div id="evaluation-history-section" style="margin-top: 30px;">
-            <h4>سجل التقييمات السابقة</h4>
-            <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px; flex-wrap: wrap;">
-                <input type="date" id="filter-eval-date" style="padding: 6px 10px; border-radius: 6px; border: 1px solid #ccc;" />
-                <input type="text" id="filter-eval-name" placeholder="بحث بالاسم" style="padding: 6px 10px; border-radius: 6px; border: 1px solid #ccc;" />
-                <button class="action-btn" id="apply-eval-filter" style="padding: 8px 18px;">تصفية</button>
-                <button class="action-btn" id="clear-eval-filter" style="padding: 8px 18px;">مسح التصفية</button>
-            </div>
-            <div id="evaluation-history-table" style="overflow-x: auto;"></div>
         </div>
     </div>
 </div>
