@@ -378,6 +378,7 @@
             <p>Generate, Scan & Track QR Codes</p>
         </div>
 
+        <!-- Update the nav-buttons div -->
         <div class="nav-buttons">
             <button class="nav-btn create-btn active" onclick="showSection('create')">
                 Create QR Code
@@ -390,6 +391,9 @@
             </button>
             <button class="nav-btn qrlist-btn" onclick="showSection('qrlist')">
                 View All QR Codes
+            </button>
+            <button class="nav-btn dashboard-btn" onclick="showSection('dashboard')">
+                Evaluation Options
             </button>
         </div>
 
@@ -460,7 +464,16 @@
             
             <div id="scan-count"></div>
             <button class="export-btn" onclick="exportReportsToExcel()">Export Reports to Excel</button>
-            <button class="export-btn" onclick="showFinalReportModal()">Final Report</button>
+            
+            <!-- Add Summary Report Button -->
+            <div class="export-section">
+                <h3>Summary Reports</h3>
+                <button class="action-btn" onclick="generateSummaryReport()">Show Summary Report</button>
+                <button class="export-btn" onclick="exportSummaryToExcel()">Export Summary to Excel</button>
+            </div>
+            
+            <!-- Container for Summary Report -->
+            <div id="summary-container" style="display: none;"></div>
         </div>
 
         <!-- All QR Codes Section -->
@@ -479,48 +492,78 @@
                 <tbody id="qrlist-tbody">
                 </tbody>
             </table>
-            <!-- Dashboard for Dropdown Options -->
-            <div class="export-section" style="margin-top:30px;">
-                <h3>إدارة خيارات التقييم</h3>
-                <div id="dropdown-dashboard"></div>
-            </div>
-        </div>
-
-        <!-- QR Detail Modal -->
-        <div id="qr-detail-modal" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;">
-            <div style="background:#fff;padding:30px 20px 20px 20px;border-radius:12px;max-width:400px;margin:60px auto;position:relative;">
-                <button onclick="closeQRDetailModal()" style="position:absolute;top:10px;right:10px;font-size:20px;background:none;border:none;cursor:pointer;">&times;</button>
-                <h2>تفاصيل QR</h2>
-                <div style="text-align:center;margin-bottom:10px;">
-                    <img id="qr-detail-img" src="" alt="QR" style="width:120px;height:120px;display:block;margin:0 auto 10px auto;" />
-                    <div><strong>الاسم:</strong> <span id="qr-detail-name"></span></div>
-                    <div><strong>الموبايل:</strong> <span id="qr-detail-phone"></span></div>
-                    <div><strong>تاريخ الإنشاء:</strong> <span id="qr-detail-date"></span></div>
-                </div>
-                <form id="evaluation-form" onsubmit="event.preventDefault();saveEvaluation();">
-                    <h3 style="margin:10px 0;">التقييم</h3>
-                    <div class="form-group"><label>الحضور</label><select id="eval-الحضور" name="الحضور"></select></div>
-                    <div class="form-group"><label>الالتزام</label><select id="eval-الالتزام" name="الالتزام"></select></div>
-                    <div class="form-group"><label>الكتاب المقدس</label><select id="eval-الكتاب المقدس" name="الكتاب المقدس"></select></div>
-                    <div class="form-group"><label>الحفظ</label><select id="eval-الحفظ" name="الحفظ"></select></div>
-                    <div class="form-group"><label>الموبايل</label><select id="eval-الموبايل" name="الموبايل"></select></div>
-                    <div class="form-group"><label>الترانيم</label><select id="eval-الترانيم" name="الترانيم"></select></div>
-                    <div class="form-group"><label>الالعاب</label><select id="eval-الالعاب" name="الالعاب"></select></div>
-                    <button type="submit" class="action-btn" style="width:100%;margin-top:10px;">حفظ التقييم</button>
-                </form>
-            </div>
-        </div>
-
-        <!-- Final Report Modal -->
-        <div id="final-report-modal" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;">
-            <div style="background:#fff;padding:30px 20px 20px 20px;border-radius:12px;max-width:900px;margin:60px auto;position:relative;">
-                <button onclick="closeFinalReportModal()" style="position:absolute;top:10px;right:10px;font-size:20px;background:none;border:none;cursor:pointer;">&times;</button>
-                <h2 style="text-align:center;">Final Evaluation Report</h2>
-                <div id="final-report-table-container" style="overflow-x:auto;"></div>
-                <button class="export-btn" onclick="exportFinalReportToExcel()">Export Final Report to Excel</button>
-            </div>
         </div>
     </div>
 
 </body>
 </html>
+<!-- Add this at the end of the body, before closing body tag -->
+<div id="qr-details-modal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal">&times;</span>
+        <h2>QR Code Details</h2>
+        <div id="qr-details-content"></div>
+        
+        <div id="evaluation-form">
+            <h3>التقييم</h3>
+            <div class="form-group">
+                <label for="attendance">الحضور:</label>
+                <select id="attendance" class="eval-dropdown"></select>
+            </div>
+            <div class="form-group">
+                <label for="commitment">الالتزام:</label>
+                <select id="commitment" class="eval-dropdown"></select>
+            </div>
+            <div class="form-group">
+                <label for="bible">الكتاب المقدس:</label>
+                <select id="bible" class="eval-dropdown"></select>
+            </div>
+            <div class="form-group">
+                <label for="memorization">الحفظ:</label>
+                <select id="memorization" class="eval-dropdown"></select>
+            </div>
+            <div class="form-group">
+                <label for="mobile">الموبايل:</label>
+                <select id="mobile" class="eval-dropdown"></select>
+            </div>
+            <div class="form-group">
+                <label for="hymns">الترانيم:</label>
+                <select id="hymns" class="eval-dropdown"></select>
+            </div>
+            <div class="form-group">
+                <label for="games">الالعاب:</label>
+                <select id="games" class="eval-dropdown"></select>
+            </div>
+            <button class="action-btn" id="save-evaluation">Save Evaluation</button>
+        </div>
+    </div>
+</div>
+
+<!-- Add Dashboard Section -->
+<div id="dashboard-section" class="section">
+    <h2>Evaluation Options Dashboard</h2>
+    <div class="dashboard-container">
+        <div class="form-group">
+            <label for="option-category">Category:</label>
+            <select id="option-category">
+                <option value="attendance">الحضور</option>
+                <option value="commitment">الالتزام</option>
+                <option value="bible">الكتاب المقدس</option>
+                <option value="memorization">الحفظ</option>
+                <option value="mobile">الموبايل</option>
+                <option value="hymns">الترانيم</option>
+                <option value="games">الالعاب</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="option-value">Option Value:</label>
+            <input type="text" id="option-value" placeholder="Enter option value">
+        </div>
+        <button class="action-btn" id="add-option">Add Option</button>
+        
+        <div class="options-list">
+            <h3>Current Options</h3>
+            <div id="options-container"></div>
+        </div>
+    </div>
+</div>
