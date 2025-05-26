@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>QR Code Manager</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
     <script src="https://unpkg.com/qrcode@1.5.3/build/qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
@@ -372,67 +374,54 @@
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>QR Code Manager</h1>
-            <p>Generate, Scan & Track QR Codes</p>
+    <div class="container my-4 p-0 bg-white rounded-4 shadow-lg overflow-hidden">
+        <div class="bg-success bg-gradient text-white text-center py-4 rounded-top-4">
+            <h1 class="mb-2">QR Code Manager</h1>
+            <p class="mb-0">Generate, Scan & Track QR Codes</p>
         </div>
-
-        <!-- Update the nav-buttons div -->
-        <div class="nav-buttons">
-            <button class="nav-btn create-btn active" onclick="showSection('create')">
-                Create QR Code
-            </button>
-            <button class="nav-btn scan-btn" onclick="showSection('scan')">
-                Scan QR Code
-            </button>
-            <button class="nav-btn report-btn" onclick="showSection('report')">
-                View Reports
-            </button>
-            <button class="nav-btn qrlist-btn" onclick="showSection('qrlist')">
-                View All QR Codes
-            </button>
-            <div style="display: flex; flex-direction: column; gap: 5px; align-items: center;">
-                <button class="export-btn" onclick="exportFullBackup()">Backup All System Data</button>
+        <!-- Navigation -->
+        <nav class="nav nav-pills flex-column flex-md-row justify-content-center gap-2 py-3 bg-light">
+            <button class="nav-link create-btn active" onclick="showSection('create')">Create QR Code</button>
+            <button class="nav-link scan-btn" onclick="showSection('scan')">Scan QR Code</button>
+            <button class="nav-link report-btn" onclick="showSection('report')">View Reports</button>
+            <button class="nav-link qrlist-btn" onclick="showSection('qrlist')">View All QR Codes</button>
+            <div class="d-flex flex-column flex-md-row gap-2 align-items-center">
+                <button class="btn btn-warning" onclick="exportFullBackup()">Backup All System Data</button>
                 <input type="file" id="import-full-backup-file" accept=".json" style="display:none" onchange="importFullBackup(event)">
-                <button class="export-btn" onclick="document.getElementById('import-full-backup-file').click()">Import Full Backup</button>
+                <button class="btn btn-warning" onclick="document.getElementById('import-full-backup-file').click()">Import Full Backup</button>
             </div>
-            <button class="nav-btn dashboard-btn" onclick="showSection('dashboard')">
-                Evaluation Options
-            </button>
-        </div>
-
+            <button class="nav-link dashboard-btn" onclick="showSection('dashboard')">Evaluation Options</button>
+        </nav>
         <!-- Create QR Code Section -->
-        <div id="create-section" class="section active">
-            <h2>Create New QR Code</h2>
-            <div class="form-group">
-                <label for="name">Name:</label>
-                <input type="text" id="name" placeholder="Enter name" required>
-            </div>
-            <div class="form-group">
-                <label for="phone">Phone Number:</label>
-                <input type="tel" id="phone" placeholder="Enter phone number" required>
-            </div>
-            <button class="action-btn" onclick="generateQR()">Generate QR Code</button>
-            
-            <div id="qr-result" class="qr-display" style="display: none;">
+        <div id="create-section" class="section active p-4">
+            <h2 class="mb-4">Create New QR Code</h2>
+            <form class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <label for="name" class="form-label">Name:</label>
+                    <input type="text" id="name" class="form-control" placeholder="Enter name" required>
+                </div>
+                <div class="col-md-6">
+                    <label for="phone" class="form-label">Phone Number:</label>
+                    <input type="tel" id="phone" class="form-control" placeholder="Enter phone number" required>
+                </div>
+                <div class="col-12">
+                    <button type="button" class="btn btn-success px-4" onclick="generateQR()">Generate QR Code</button>
+                </div>
+            </form>
+            <div id="qr-result" class="qr-display text-center p-4 bg-light rounded-3 my-4" style="display: none;">
                 <h3 id="qr-name"></h3>
                 <canvas id="qr-canvas"></canvas>
-                <button class="action-btn" onclick="saveQRImage()">Save Image</button>
+                <button class="btn btn-primary mt-3" onclick="saveQRImage()">Save Image</button>
             </div>
-            
             <div id="create-status" class="status"></div>
-            
-            <div class="export-section">
+            <div class="export-section text-center mt-4 p-3 bg-light rounded-3">
                 <h3>Data Management</h3>
                 <p>Export your QR codes and scan data for backup</p>
-                <button class="export-btn" onclick="exportData()">Export Data</button>
-                <!-- Add Import Button and File Input -->
+                <button class="btn btn-warning me-2" onclick="exportData()">Export Data</button>
                 <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)">
-                <button class="export-btn" onclick="document.getElementById('import-file').click()">Import Data</button>
+                <button class="btn btn-warning" onclick="document.getElementById('import-file').click()">Import Data</button>
             </div>
         </div>
-
         <!-- Scan QR Code Section -->
         <div id="scan-section" class="section">
             <h2>Scan QR Code</h2>
@@ -504,7 +493,8 @@
             </div>
         </div>
     </div>
-
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
 <!-- Add this at the end of the body, before closing body tag -->
