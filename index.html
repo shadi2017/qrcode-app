@@ -478,6 +478,36 @@
                 <tbody id="qrlist-tbody">
                 </tbody>
             </table>
+            <!-- Dashboard for Dropdown Options -->
+            <div class="export-section" style="margin-top:30px;">
+                <h3>إدارة خيارات التقييم</h3>
+                <div id="dropdown-dashboard"></div>
+            </div>
+        </div>
+
+        <!-- QR Detail Modal -->
+        <div id="qr-detail-modal" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;">
+            <div style="background:#fff;padding:30px 20px 20px 20px;border-radius:12px;max-width:400px;margin:60px auto;position:relative;">
+                <button onclick="closeQRDetailModal()" style="position:absolute;top:10px;right:10px;font-size:20px;background:none;border:none;cursor:pointer;">&times;</button>
+                <h2>تفاصيل QR</h2>
+                <div style="text-align:center;margin-bottom:10px;">
+                    <img id="qr-detail-img" src="" alt="QR" style="width:120px;height:120px;display:block;margin:0 auto 10px auto;" />
+                    <div><strong>الاسم:</strong> <span id="qr-detail-name"></span></div>
+                    <div><strong>الموبايل:</strong> <span id="qr-detail-phone"></span></div>
+                    <div><strong>تاريخ الإنشاء:</strong> <span id="qr-detail-date"></span></div>
+                </div>
+                <form id="evaluation-form" onsubmit="event.preventDefault();saveEvaluation();">
+                    <h3 style="margin:10px 0;">التقييم</h3>
+                    <div class="form-group"><label>الحضور</label><select id="eval-الحضور" name="الحضور"></select></div>
+                    <div class="form-group"><label>الالتزام</label><select id="eval-الالتزام" name="الالتزام"></select></div>
+                    <div class="form-group"><label>الكتاب المقدس</label><select id="eval-الكتاب المقدس" name="الكتاب المقدس"></select></div>
+                    <div class="form-group"><label>الحفظ</label><select id="eval-الحفظ" name="الحفظ"></select></div>
+                    <div class="form-group"><label>الموبايل</label><select id="eval-الموبايل" name="الموبايل"></select></div>
+                    <div class="form-group"><label>الترانيم</label><select id="eval-الترانيم" name="الترانيم"></select></div>
+                    <div class="form-group"><label>الالعاب</label><select id="eval-الالعاب" name="الالعاب"></select></div>
+                    <button type="submit" class="action-btn" style="width:100%;margin-top:10px;">حفظ التقييم</button>
+                </form>
+            </div>
         </div>
     </div>
 

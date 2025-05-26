@@ -2,7 +2,9 @@
 const db = new Dexie('QRCodeDB');
 db.version(1).stores({
     qrcodes: '++id, name, phone, created_date',
-    scans: '++id, name, phone, scan_date, scan_time'
+    scans: '++id, name, phone, scan_date, scan_time',
+    evaluations: '++id, qr_id, phone, date',
+    dropdownOptions: 'key'
 });
 
 let html5QrcodeScanner = null;
@@ -566,7 +568,6 @@ async function loadAllQRCodes() {
                     qrImgSrc = await QRCode.toDataURL(qr.phone, { width: 80, margin: 1, color: { dark: '#000000', light: '#FFFFFF' } });
                     qrImgHtml = `<img src="${qrImgSrc}" alt="QR" style="width:80px;height:80px;">`;
                 } catch (e) {
-                    // fallback
                     qrImgSrc = `https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(qr.phone)}&color=000000&bgcolor=FFFFFF`;
                     qrImgHtml = `<img src="${qrImgSrc}" alt="QR" style="width:80px;height:80px;">`;
                 }
@@ -580,8 +581,11 @@ async function loadAllQRCodes() {
                 <td>${qr.created_date || ''}</td>
                 <td>${qrImgHtml}</td>
             `;
+            row.style.cursor = 'pointer';
+            row.onclick = () => openQRDetailModal(qr);
             tbody.appendChild(row);
         }
+        renderDropdownDashboard();
     } catch (error) {
         tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">Error loading QR codes</td></tr>';
     }
@@ -653,6 +657,118 @@ async function exportAllQRCodesToPDF() {
     }
     pdf.save('all_qr_codes.pdf');
     showStatus('create-status', 'All QR codes exported as PDF!', 'success');
+}
+
+// --- Modal Logic for QR Details & Evaluation ---
+let currentQRDetail = null;
+
+function openQRDetailModal(qr) {
+    currentQRDetail = qr;
+    // Fill modal content
+    const modal = document.getElementById('qr-detail-modal');
+    document.getElementById('qr-detail-name').textContent = qr.name;
+    document.getElementById('qr-detail-phone').textContent = qr.phone;
+    document.getElementById('qr-detail-date').textContent = qr.created_date || '';
+    // Generate QR image
+    const qrImg = document.getElementById('qr-detail-img');
+    if (typeof QRCode !== 'undefined' && QRCode.toDataURL) {
+        QRCode.toDataURL(qr.phone, { width: 120, margin: 2, color: { dark: '#000000', light: '#FFFFFF' } })
+            .then(url => { qrImg.src = url; })
+            .catch(() => { qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(qr.phone)}&color=000000&bgcolor=FFFFFF`; });
+    } else {
+        qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(qr.phone)}&color=000000&bgcolor=FFFFFF`;
+    }
+    // Reset form
+    document.getElementById('evaluation-form').reset();
+    // Show modal
+    modal.style.display = 'block';
+    // Load dropdown options
+    loadDropdownOptionsForForm();
+}
+
+function closeQRDetailModal() {
+    document.getElementById('qr-detail-modal').style.display = 'none';
+    currentQRDetail = null;
+}
+
+// Save evaluation (append, not overwrite)
+async function saveEvaluation() {
+    if (!currentQRDetail) return;
+    const form = document.getElementById('evaluation-form');
+    const values = {
+        'الحضور': form['الحضور'].value,
+        'الالتزام': form['الالتزام'].value,
+        'الكتاب المقدس': form['الكتاب المقدس'].value,
+        'الحفظ': form['الحفظ'].value,
+        'الموبايل': form['الموبايل'].value,
+        'الترانيم': form['الترانيم'].value,
+        'الالعاب': form['الالعاب'].value
+    };
+    await db.evaluations.add({
+        qr_id: currentQRDetail.id,
+        phone: currentQRDetail.phone,
+        date: new Date().toISOString().split('T')[0],
+        values
+    });
+    showStatus('create-status', 'تم حفظ التقييم بنجاح!', 'success');
+    closeQRDetailModal();
+}
+
+// Load dropdown options for the form
+async function loadDropdownOptionsForForm() {
+    const keys = ['الحضور', 'الالتزام', 'الكتاب المقدس', 'الحفظ', 'الموبايل', 'الترانيم', 'الالعاب'];
+    for (const key of keys) {
+        const select = document.getElementById('eval-' + key);
+        if (!select) continue;
+        select.innerHTML = '';
+        const entry = await db.dropdownOptions.get(key);
+        const options = entry && Array.isArray(entry.options) ? entry.options : ['ممتاز', 'جيد', 'ضعيف'];
+        for (const opt of options) {
+            const option = document.createElement('option');
+            option.value = opt;
+            option.textContent = opt;
+            select.appendChild(option);
+        }
+    }
+}
+
+// --- Dropdown Dashboard Logic ---
+const evalKeys = ['الحضور', 'الالتزام', 'الكتاب المقدس', 'الحفظ', 'الموبايل', 'الترانيم', 'الالعاب'];
+
+async function renderDropdownDashboard() {
+    const dash = document.getElementById('dropdown-dashboard');
+    dash.innerHTML = '';
+    for (const key of evalKeys) {
+        const entry = await db.dropdownOptions.get(key);
+        const options = entry && Array.isArray(entry.options) ? entry.options : ['ممتاز', 'جيد', 'ضعيف'];
+        const div = document.createElement('div');
+        div.style.marginBottom = '10px';
+        div.innerHTML = `<strong>${key}:</strong> <input id="add-opt-${key}" type="text" placeholder="إضافة خيار" style="margin-left:5px;"> <button onclick="addDropdownOption('${key}')">إضافة</button> <span id="opts-${key}"></span>`;
+        dash.appendChild(div);
+        // Render options
+        const optsSpan = div.querySelector(`#opts-${key}`);
+        optsSpan.innerHTML = options.map((opt, idx) => `<span style='background:#eee;padding:2px 8px;border-radius:6px;margin:0 2px;display:inline-block;'>${opt} <a href='#' style='color:red;' onclick='removeDropdownOption("${key}",${idx});return false;'>&times;</a></span>`).join('');
+    }
+}
+
+async function addDropdownOption(key) {
+    const input = document.getElementById('add-opt-' + key);
+    const val = input.value.trim();
+    if (!val) return;
+    let entry = await db.dropdownOptions.get(key);
+    if (!entry) entry = { key, options: [] };
+    if (!entry.options.includes(val)) entry.options.push(val);
+    await db.dropdownOptions.put(entry);
+    input.value = '';
+    renderDropdownDashboard();
+}
+
+async function removeDropdownOption(key, idx) {
+    let entry = await db.dropdownOptions.get(key);
+    if (!entry) return;
+    entry.options.splice(idx, 1);
+    await db.dropdownOptions.put(entry);
+    renderDropdownDashboard();
 }
 
 // Initialize app
