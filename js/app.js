@@ -2,7 +2,9 @@
 const db = new Dexie('QRCodeDB');
 db.version(1).stores({
     qrcodes: '++id, name, phone, created_date',
-    scans: '++id, name, phone, scan_date, scan_time'
+    scans: '++id, name, phone, scan_date, scan_time',
+    evaluations: '++id, qrId, date, attendance, commitment, bible, memorization, mobile, hymns, games',
+    evaluationOptions: '++id, category, value'
 });
 
 let html5QrcodeScanner = null;
@@ -546,7 +548,7 @@ function exportReportsToExcel() {
     showStatus('create-status', 'Reports exported as Excel (CSV) file!', 'success');
 }
 
-// Load and display all QR codes in a table
+// Load and display all QR codes in a table with clickable rows
 async function loadAllQRCodes() {
     const tbody = document.getElementById('qrlist-tbody');
     tbody.innerHTML = '';
@@ -558,6 +560,8 @@ async function loadAllQRCodes() {
         }
         for (const qr of qrcodes) {
             const row = document.createElement('tr');
+            row.className = 'clickable-row';
+            row.onclick = () => showQRDetails(qr);
             // Generate QR image as data URL or fallback
             let qrImgHtml = '';
             let qrImgSrc = '';
@@ -584,6 +588,162 @@ async function loadAllQRCodes() {
         }
     } catch (error) {
         tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">Error loading QR codes</td></tr>';
+    }
+}
+
+// Show QR details modal
+function showQRDetails(qr) {
+    const modal = document.getElementById('qr-details-modal');
+    const modalContent = document.getElementById('qr-details-content');
+    
+    // Populate modal with QR details and evaluation form
+    modalContent.innerHTML = `
+        <h2>تفاصيل الـ QR</h2>
+        <div class="qr-info">
+            <p><strong>الاسم:</strong> ${qr.name}</p>
+            <p><strong>رقم الهاتف:</strong> ${qr.phone}</p>
+            <p><strong>تاريخ الإنشاء:</strong> ${qr.created_date || ''}</p>
+        </div>
+        
+        <h3>التقييم</h3>
+        <form id="evaluation-form" data-qrid="${qr.id}">
+            <div class="form-group">
+                <label for="attendance">الحضور:</label>
+                <select id="attendance" name="attendance">
+                    <option value="">اختر التقييم</option>
+                    ${generateOptionsFromList('attendance')}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="commitment">الالتزام:</label>
+                <select id="commitment" name="commitment">
+                    <option value="">اختر التقييم</option>
+                    ${generateOptionsFromList('commitment')}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="bible">الكتاب المقدس:</label>
+                <select id="bible" name="bible">
+                    <option value="">اختر التقييم</option>
+                    ${generateOptionsFromList('bible')}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="memorization">الحفظ:</label>
+                <select id="memorization" name="memorization">
+                    <option value="">اختر التقييم</option>
+                    ${generateOptionsFromList('memorization')}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="mobile">الموبايل:</label>
+                <select id="mobile" name="mobile">
+                    <option value="">اختر التقييم</option>
+                    ${generateOptionsFromList('mobile')}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="hymns">الترانيم:</label>
+                <select id="hymns" name="hymns">
+                    <option value="">اختر التقييم</option>
+                    ${generateOptionsFromList('hymns')}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="games">الالعاب:</label>
+                <select id="games" name="games">
+                    <option value="">اختر التقييم</option>
+                    ${generateOptionsFromList('games')}
+                </select>
+            </div>
+            <button type="button" class="action-btn" onclick="saveEvaluation(${qr.id})">حفظ التقييم</button>
+        </form>
+    `;
+    
+    // Load existing evaluation data if available
+    loadExistingEvaluation(qr.id);
+    
+    // Show modal
+    modal.style.display = 'block';
+    
+    // Close modal when clicking on X
+    document.querySelector('.close-modal').onclick = function() {
+        modal.style.display = 'none';
+    };
+    
+    // Close modal when clicking outside of it
+    window.onclick = function(event) {
+        if (event.target == modal) {
+            modal.style.display = 'none';
+        }
+    };
+}
+
+// Generate options for dropdowns
+async function generateOptionsFromList(category) {
+    try {
+        const options = await db.evaluationOptions
+            .where('category')
+            .equals(category)
+            .toArray();
+        
+        if (options.length === 0) {
+            return '<option value="1">1</option><option value="2">2</option><option value="3">3</option>';
+        }
+        
+        return options.map(opt => `<option value="${opt.value}">${opt.value}</option>`).join('');
+    } catch (error) {
+        console.error('Error loading options:', error);
+        return '<option value="1">1</option><option value="2">2</option><option value="3">3</option>';
+    }
+}
+
+// Load existing evaluation data if available
+async function loadExistingEvaluation(qrId) {
+    try {
+        const evaluation = await db.evaluations
+            .where('qrId')
+            .equals(qrId)
+            .last();
+        
+        if (evaluation) {
+            document.getElementById('attendance').value = evaluation.attendance || '';
+            document.getElementById('commitment').value = evaluation.commitment || '';
+            document.getElementById('bible').value = evaluation.bible || '';
+            document.getElementById('memorization').value = evaluation.memorization || '';
+            document.getElementById('mobile').value = evaluation.mobile || '';
+            document.getElementById('hymns').value = evaluation.hymns || '';
+            document.getElementById('games').value = evaluation.games || '';
+        }
+    } catch (error) {
+        console.error('Error loading evaluation:', error);
+    }
+}
+
+// Save evaluation data
+async function saveEvaluation(qrId) {
+    try {
+        const evaluation = {
+            qrId: qrId,
+            date: new Date().toISOString().split('T')[0],
+            attendance: document.getElementById('attendance').value,
+            commitment: document.getElementById('commitment').value,
+            bible: document.getElementById('bible').value,
+            memorization: document.getElementById('memorization').value,
+            mobile: document.getElementById('mobile').value,
+            hymns: document.getElementById('hymns').value,
+            games: document.getElementById('games').value
+        };
+        
+        await db.evaluations.add(evaluation);
+        
+        showStatus('create-status', 'تم حفظ التقييم بنجاح!', 'success');
+        
+        // Close modal
+        document.getElementById('qr-details-modal').style.display = 'none';
+    } catch (error) {
+        console.error('Error saving evaluation:', error);
+        showStatus('create-status', 'حدث خطأ أثناء حفظ التقييم', 'error');
     }
 }
 
@@ -653,6 +813,146 @@ async function exportAllQRCodesToPDF() {
     }
     pdf.save('all_qr_codes.pdf');
     showStatus('create-status', 'All QR codes exported as PDF!', 'success');
+}
+
+// Generate final report
+async function generateFinalReport() {
+    try {
+        // Get all QR codes
+        const qrcodes = await db.qrcodes.toArray();
+        
+        // Get all scans
+        const scans = await db.scans.toArray();
+        
+        // Get all evaluations
+        const evaluations = await db.evaluations.toArray();
+        
+        // Calculate statistics
+        const totalQRCodes = qrcodes.length;
+        const totalScans = scans.length;
+        
+        // Calculate evaluation averages
+        const evalStats = {
+            attendance: calculateAverage(evaluations, 'attendance'),
+            commitment: calculateAverage(evaluations, 'commitment'),
+            bible: calculateAverage(evaluations, 'bible'),
+            memorization: calculateAverage(evaluations, 'memorization'),
+            mobile: calculateAverage(evaluations, 'mobile'),
+            hymns: calculateAverage(evaluations, 'hymns'),
+            games: calculateAverage(evaluations, 'games')
+        };
+        
+        // Display report
+        const reportDiv = document.getElementById('final-report-content');
+        reportDiv.innerHTML = `
+            <h2>التقرير النهائي</h2>
+            <div class="report-summary">
+                <p><strong>إجمالي عدد الـ QR:</strong> ${totalQRCodes}</p>
+                <p><strong>إجمالي عدد المسح:</strong> ${totalScans}</p>
+            </div>
+            
+            <h3>متوسط التقييمات</h3>
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>الفئة</th>
+                        <th>المتوسط</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>الحضور</td>
+                        <td>${evalStats.attendance}</td>
+                    </tr>
+                    <tr>
+                        <td>الالتزام</td>
+                        <td>${evalStats.commitment}</td>
+                    </tr>
+                    <tr>
+                        <td>الكتاب المقدس</td>
+                        <td>${evalStats.bible}</td>
+                    </tr>
+                    <tr>
+                        <td>الحفظ</td>
+                        <td>${evalStats.memorization}</td>
+                    </tr>
+                    <tr>
+                        <td>الموبايل</td>
+                        <td>${evalStats.mobile}</td>
+                    </tr>
+                    <tr>
+                        <td>الترانيم</td>
+                        <td>${evalStats.hymns}</td>
+                    </tr>
+                    <tr>
+                        <td>الالعاب</td>
+                        <td>${evalStats.games}</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <button class="export-btn" onclick="exportFinalReportToExcel()">تصدير التقرير النهائي</button>
+        `;
+        
+        // Show report section
+        document.getElementById('final-report-section').style.display = 'block';
+        
+    } catch (error) {
+        console.error('Error generating final report:', error);
+        showStatus('create-status', 'حدث خطأ أثناء إنشاء التقرير النهائي', 'error');
+    }
+}
+
+// Calculate average for evaluation field
+function calculateAverage(evaluations, field) {
+    const values = evaluations
+        .filter(e => e[field] && !isNaN(parseInt(e[field])))
+        .map(e => parseInt(e[field]));
+    
+    if (values.length === 0) return 'N/A';
+    
+    const sum = values.reduce((a, b) => a + b, 0);
+    return (sum / values.length).toFixed(2);
+}
+
+// Export final report to Excel
+function exportFinalReportToExcel() {
+    // Create CSV content
+    const rows = [
+        ['الفئة', 'القيمة']
+    ];
+    
+    // Add QR and scan counts
+    const totalQRCount = document.querySelector('.report-summary p:nth-child(1)').textContent.split(':')[1].trim();
+    const totalScanCount = document.querySelector('.report-summary p:nth-child(2)').textContent.split(':')[1].trim();
+    
+    rows.push(['إجمالي عدد الـ QR', totalQRCount]);
+    rows.push(['إجمالي عدد المسح', totalScanCount]);
+    rows.push(['', '']); // Empty row as separator
+    
+    // Add evaluation averages
+    rows.push(['متوسط التقييمات', 'القيمة']);
+    rows.push(['الحضور', document.querySelector('.report-table tr:nth-child(2) td:nth-child(2)').textContent]);
+    rows.push(['الالتزام', document.querySelector('.report-table tr:nth-child(3) td:nth-child(2)').textContent]);
+    rows.push(['الكتاب المقدس', document.querySelector('.report-table tr:nth-child(4) td:nth-child(2)').textContent]);
+    rows.push(['الحفظ', document.querySelector('.report-table tr:nth-child(5) td:nth-child(2)').textContent]);
+    rows.push(['الموبايل', document.querySelector('.report-table tr:nth-child(6) td:nth-child(2)').textContent]);
+    rows.push(['الترانيم', document.querySelector('.report-table tr:nth-child(7) td:nth-child(2)').textContent]);
+    rows.push(['الالعاب', document.querySelector('.report-table tr:nth-child(8) td:nth-child(2)').textContent]);
+    
+    // Convert to CSV format
+    const csvContent = rows.map(row => row.join(',')).join('\n');
+    
+    // Create a Blob and download the file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'final_report.csv';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
 }
 
 // Initialize app
