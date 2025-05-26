@@ -773,37 +773,31 @@ async function addOption() {
     try {
         const category = document.getElementById('option-category').value;
         const value = document.getElementById('option-value').value.trim();
-        
         if (!value) {
             showStatus('create-status', 'Please enter an option value', 'error');
             return;
         }
-        
         // Check if option already exists
         const existingOption = await db.evaluation_options
             .where('category')
             .equals(category)
             .and(option => option.value === value)
             .first();
-        
         if (existingOption) {
             showStatus('create-status', 'This option already exists', 'error');
             return;
         }
-        
         // Add new option
         await db.evaluation_options.add({
             category,
             value
         });
-        
         // Clear input
         document.getElementById('option-value').value = '';
-        
+        // Show success message immediately
+        showStatus('create-status', 'Option added successfully!', 'success');
         // Reload options
         await loadDashboard();
-        
-        showStatus('create-status', 'Option added successfully!', 'success');
     } catch (error) {
         console.error('Error adding option:', error);
         showStatus('create-status', 'Error adding option', 'error');
@@ -1091,6 +1085,78 @@ async function importEvaluationData(event) {
     }
 }
 
+// Export all system data (backup)
+async function exportFullBackup() {
+    try {
+        const qrcodes = await db.qrcodes.toArray();
+        const scans = await db.scans.toArray();
+        const evaluations = await db.evaluations.toArray();
+        const evaluation_options = await db.evaluation_options.toArray();
+        const data = {
+            qrcodes,
+            scans,
+            evaluations,
+            evaluation_options,
+            exportDate: new Date().toISOString()
+        };
+        const dataStr = JSON.stringify(data, null, 2);
+        const blob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.download = `qr_app_backup_${new Date().toISOString().split('T')[0]}.json`;
+        link.href = url;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        showStatus('create-status', 'Full system backup exported successfully!', 'success');
+    } catch (error) {
+        showStatus('create-status', 'Error exporting full backup', 'error');
+    }
+}
+
+// Import all system data (full backup)
+async function importFullBackup(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+        // Clear all data
+        await db.qrcodes.clear();
+        await db.scans.clear();
+        await db.evaluations.clear();
+        await db.evaluation_options.clear();
+        // Import new data
+        if (Array.isArray(data.qrcodes)) {
+            for (const qr of data.qrcodes) {
+                await db.qrcodes.add(qr);
+            }
+        }
+        if (Array.isArray(data.scans)) {
+            for (const scan of data.scans) {
+                await db.scans.add(scan);
+            }
+        }
+        if (Array.isArray(data.evaluations)) {
+            for (const evalObj of data.evaluations) {
+                await db.evaluations.add(evalObj);
+            }
+        }
+        if (Array.isArray(data.evaluation_options)) {
+            for (const opt of data.evaluation_options) {
+                await db.evaluation_options.add(opt);
+            }
+        }
+        showStatus('create-status', 'Full backup imported successfully! (All data replaced)', 'success');
+        loadDashboard();
+        loadReports();
+        loadAllQRCodes();
+    } catch (error) {
+        showStatus('create-status', 'Error importing full backup', 'error');
+    }
+}
+
 // Initialize app
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize database
@@ -1118,6 +1184,12 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('option-category').addEventListener('change', loadDashboard);
     document.getElementById('add-option').addEventListener('click', addOption);
     
-    // Show create section by default
-    showSection('create');
+    // Hide all sections except create-section on load
+    document.querySelectorAll('.section').forEach(section => {
+        section.classList.remove('active');
+    });
+    document.getElementById('create-section').classList.add('active');
+    // Hide QR details modal
+    const qrDetailsModal = document.getElementById('qr-details-modal');
+    if (qrDetailsModal) qrDetailsModal.style.display = 'none';
 });

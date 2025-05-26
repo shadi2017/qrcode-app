@@ -568,6 +568,9 @@
             <button class="export-btn" onclick="exportEvaluationData()">Export Evaluation Data</button>
             <input type="file" id="import-eval-file" accept=".json" style="display:none" onchange="importEvaluationData(event)">
             <button class="export-btn" onclick="document.getElementById('import-eval-file').click()">Import Evaluation Data</button>
+            <button class="export-btn" onclick="exportFullBackup()">Backup All System Data</button>
+            <input type="file" id="import-full-backup-file" accept=".json" style="display:none" onchange="importFullBackup(event)">
+            <button class="export-btn" onclick="document.getElementById('import-full-backup-file').click()">Import Full Backup</button>
         </div>
     </div>
 </div>
