@@ -962,22 +962,25 @@ async function generateSummaryReport() {
                 countEvalStat(perStat.project, eval.project);
                 countEvalStat(perStat.quiz_grade, eval.quiz_grade);
             });
+            // Use a table for better formatting
             perQRHtml += `
-                <div class="summary-item">
-                    <span><b>${qr.name} (${qr.phone})</b> - Total Evaluations: ${qrEvals.length}</span>
-                    <span>
-                        الحضور: ${Object.entries(perStat.attendance).map(([v, c]) => `${v}: ${c}`).join(', ') || 'No data'}<br>
-                        الالتزام: ${Object.entries(perStat.commitment).map(([v, c]) => `${v}: ${c}`).join(', ') || 'No data'}<br>
-                        الكتاب المقدس: ${Object.entries(perStat.bible).map(([v, c]) => `${v}: ${c}`).join(', ') || 'No data'}<br>
-                        الحفظ: ${Object.entries(perStat.memorization).map(([v, c]) => `${v}: ${c}`).join(', ') || 'No data'}<br>
-                        اجزاء الحفظ: ${Object.entries(perStat.memorization_parts).map(([v, c]) => `${v}: ${c}`).join(', ') || 'No data'}<br>
-                        الموبايل: ${Object.entries(perStat.mobile).map(([v, c]) => `${v}: ${c}`).join(', ') || 'No data'}<br>
-                        الترانيم: ${Object.entries(perStat.hymns).map(([v, c]) => `${v}: ${c}`).join(', ') || 'No data'}<br>
-                        الالعاب: ${Object.entries(perStat.games).map(([v, c]) => `${v}: ${c}`).join(', ') || 'No data'}<br>
-                        المسابقه: ${Object.entries(perStat.competition).map(([v, c]) => `${v}: ${c}`).join(', ') || 'No data'}<br>
-                        المشروع: ${Object.entries(perStat.project).map(([v, c]) => `${v}: ${c}`).join(', ') || 'No data'}<br>
-                        درجه الكويز: ${Object.entries(perStat.quiz_grade).map(([v, c]) => `${v}: ${c}`).join(', ') || 'No data'}
-                    </span>
+                <div class="summary-item mb-3">
+                    <div><b>${qr.name} (${qr.phone})</b> - Total Evaluations: ${qrEvals.length}</div>
+                    <table class="table table-bordered table-sm mt-2 mb-0" style="background:#fff;">
+                        <tbody>
+                            <tr><th>الحضور</th><td>${Object.entries(perStat.attendance).map(([v, c]) => `${v}: ${c}`).join(', ') || 'No data'}</td></tr>
+                            <tr><th>الالتزام</th><td>${Object.entries(perStat.commitment).map(([v, c]) => `${v}: ${c}`).join(', ') || 'No data'}</td></tr>
+                            <tr><th>الكتاب المقدس</th><td>${Object.entries(perStat.bible).map(([v, c]) => `${v}: ${c}`).join(', ') || 'No data'}</td></tr>
+                            <tr><th>الحفظ</th><td>${Object.entries(perStat.memorization).map(([v, c]) => `${v}: ${c}`).join(', ') || 'No data'}</td></tr>
+                            <tr><th>اجزاء الحفظ</th><td>${Object.entries(perStat.memorization_parts).map(([v, c]) => `${v}: ${c}`).join(', ') || 'No data'}</td></tr>
+                            <tr><th>الموبايل</th><td>${Object.entries(perStat.mobile).map(([v, c]) => `${v}: ${c}`).join(', ') || 'No data'}</td></tr>
+                            <tr><th>الترانيم</th><td>${Object.entries(perStat.hymns).map(([v, c]) => `${v}: ${c}`).join(', ') || 'No data'}</td></tr>
+                            <tr><th>الالعاب</th><td>${Object.entries(perStat.games).map(([v, c]) => `${v}: ${c}`).join(', ') || 'No data'}</td></tr>
+                            <tr><th>المسابقه</th><td>${Object.entries(perStat.competition).map(([v, c]) => `${v}: ${c}`).join(', ') || 'No data'}</td></tr>
+                            <tr><th>المشروع</th><td>${Object.entries(perStat.project).map(([v, c]) => `${v}: ${c}`).join(', ') || 'No data'}</td></tr>
+                            <tr><th>درجه الكويز</th><td>${Object.entries(perStat.quiz_grade).map(([v, c]) => `${v}: ${c}`).join(', ') || 'No data'}</td></tr>
+                        </tbody>
+                    </table>
                 </div>
             `;
         }
