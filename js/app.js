@@ -763,6 +763,16 @@ async function renderEvaluationHistory(qrId) {
         tableDiv.innerHTML = '<div style="text-align:center; color:#888;">لا يوجد تقييمات سابقة</div>';
         return;
     }
+    // Sort by date (descending), then by id (descending, newest first)
+    evals.sort((a, b) => {
+        // Compare date first
+        const dateA = a.eval_date || '';
+        const dateB = b.eval_date || '';
+        if (dateA > dateB) return -1;
+        if (dateA < dateB) return 1;
+        // If same date, compare id (higher id = newer)
+        return (b.id || 0) - (a.id || 0);
+    });
     let html = '<div class="table-responsive"><table class="table table-dark table-striped table-bordered">';
     html += '<thead><tr>' +
         '<th>التاريخ</th>' +
@@ -778,7 +788,6 @@ async function renderEvaluationHistory(qrId) {
         '<th>المشروع</th>' +
         '<th>درجه الكويز</th>' +
         '</tr></thead><tbody>';
-    evals.sort((a, b) => (b.eval_date || '').localeCompare(a.eval_date || ''));
     for (const e of evals) {
         html += '<tr>' +
             `<td>${e.eval_date || ''}</td>` +
