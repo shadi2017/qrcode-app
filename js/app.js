@@ -710,6 +710,8 @@ async function saveEvaluation(qrId) {
         const project = document.getElementById('project').value;
         const quiz_grade = document.getElementById('quiz_grade').value;
         const evalDate = document.getElementById('evaluation-date').value || new Date().toISOString().split('T')[0];
+        const now = new Date();
+        const evalTime = now.toTimeString().split(' ')[0];
         await db.evaluations.add({
             qrcode_id: qrId,
             attendance,
@@ -723,7 +725,8 @@ async function saveEvaluation(qrId) {
             competition,
             project,
             quiz_grade,
-            eval_date: evalDate
+            eval_date: evalDate,
+            eval_time: evalTime
         });
         showStatus('create-status', 'Evaluation saved successfully!', 'success');
         // After saving, reset all dropdowns to default '-- Select --' and date to today
@@ -763,19 +766,24 @@ async function renderEvaluationHistory(qrId) {
         tableDiv.innerHTML = '<div style="text-align:center; color:#888;">لا يوجد تقييمات سابقة</div>';
         return;
     }
-    // Sort by date (descending), then by id (descending, newest first)
+    // Sort by date (descending), then by time (descending, newest first), then by id (descending)
     evals.sort((a, b) => {
-        // Compare date first
         const dateA = a.eval_date || '';
         const dateB = b.eval_date || '';
         if (dateA > dateB) return -1;
         if (dateA < dateB) return 1;
-        // If same date, compare id (higher id = newer)
+        // If same date, compare time
+        const timeA = a.eval_time || '';
+        const timeB = b.eval_time || '';
+        if (timeA > timeB) return -1;
+        if (timeA < timeB) return 1;
+        // If same time, compare id
         return (b.id || 0) - (a.id || 0);
     });
     let html = '<div class="table-responsive"><table class="table table-dark table-striped table-bordered">';
     html += '<thead><tr>' +
         '<th>التاريخ</th>' +
+        '<th>الوقت</th>' +
         '<th>الحضور</th>' +
         '<th>الالتزام</th>' +
         '<th>الكتاب المقدس</th>' +
@@ -791,6 +799,7 @@ async function renderEvaluationHistory(qrId) {
     for (const e of evals) {
         html += '<tr>' +
             `<td>${e.eval_date || ''}</td>` +
+            `<td>${e.eval_time || ''}</td>` +
             `<td>${e.attendance || ''}</td>` +
             `<td>${e.commitment || ''}</td>` +
             `<td>${e.bible || ''}</td>` +
