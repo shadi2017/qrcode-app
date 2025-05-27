@@ -443,18 +443,20 @@
                 <button class="action-btn" onclick="clearFilters()">Clear Filters</button>
             </div>
             
-            <table class="report-table">
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Phone</th>
-                        <th>Scan Date</th>
-                        <th>Scan Time</th>
-                    </tr>
-                </thead>
-                <tbody id="report-tbody">
-                </tbody>
-            </table>
+            <div class="table-responsive">
+                <table class="report-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Phone</th>
+                            <th>Scan Date</th>
+                            <th>Scan Time</th>
+                        </tr>
+                    </thead>
+                    <tbody id="report-tbody">
+                    </tbody>
+                </table>
+            </div>
             
             <div id="scan-count"></div>
             <button class="export-btn" onclick="exportReportsToExcel()">Export Reports to Excel</button>
@@ -474,18 +476,20 @@
         <div id="qrlist-section" class="section">
             <h2>All Generated QR Codes</h2>
             <button class="export-btn" onclick="exportAllQRCodesToPDF()">Export All QR Codes to PDF</button>
-            <table class="report-table">
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Phone</th>
-                        <th>Created Date</th>
-                        <th>QR Code</th>
-                    </tr>
-                </thead>
-                <tbody id="qrlist-tbody">
-                </tbody>
-            </table>
+            <div class="table-responsive">
+                <table class="report-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Phone</th>
+                            <th>Created Date</th>
+                            <th>QR Code</th>
+                        </tr>
+                    </thead>
+                    <tbody id="qrlist-tbody">
+                    </tbody>
+                </table>
+            </div>
             <div class="export-section">
                 <button class="export-btn" onclick="exportEvaluationData()">Export Evaluation Data</button>
                 <input type="file" id="import-eval-file" accept=".json" style="display:none" onchange="importEvaluationData(event)">
@@ -584,7 +588,7 @@
                             <button type="button" class="btn btn-secondary" id="clear-eval-filter">مسح التصفية</button>
                         </div>
                     </form>
-                    <div id="evaluation-history-table"></div>
+                    <div id="evaluation-history-table" class="table-responsive"></div>
                 </div>
             </div>
         </div>

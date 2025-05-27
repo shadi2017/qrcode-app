@@ -666,6 +666,12 @@ async function showQRDetails(qrId) {
             });
             document.getElementById('evaluation-date').value = new Date().toISOString().split('T')[0];
         }
+        // Always reset dropdowns to default '-- Select --' when opening, unless prefilling from latestEval
+        if (!latestEval) {
+            document.querySelectorAll('.eval-dropdown').forEach(dropdown => {
+                dropdown.selectedIndex = 0;
+            });
+        }
         const saveBtn = document.getElementById('save-evaluation');
         saveBtn.onclick = () => saveEvaluation(qrId);
         // Render evaluation history
@@ -741,6 +747,12 @@ async function saveEvaluation(qrId) {
             eval_date: evalDate
         });
         showStatus('create-status', 'Evaluation saved successfully!', 'success');
+        // After saving, reset all dropdowns to default '-- Select --' and date to today
+        document.querySelectorAll('.eval-dropdown').forEach(dropdown => {
+            dropdown.value = '';
+            dropdown.selectedIndex = 0;
+        });
+        document.getElementById('evaluation-date').value = new Date().toISOString().split('T')[0];
         // Hide Bootstrap modal
         const modal = bootstrap.Modal.getInstance(document.getElementById('qr-details-modal'));
         if (modal) modal.hide();
@@ -772,7 +784,7 @@ async function renderEvaluationHistory(qrId) {
         tableDiv.innerHTML = '<div style="text-align:center; color:#888;">لا يوجد تقييمات سابقة</div>';
         return;
     }
-    let html = '<table class="table table-dark table-striped table-bordered">';
+    let html = '<div class="table-responsive"><table class="table table-dark table-striped table-bordered">';
     html += '<thead><tr>' +
         '<th>التاريخ</th>' +
         '<th>الحضور</th>' +
@@ -804,7 +816,7 @@ async function renderEvaluationHistory(qrId) {
             `<td>${e.quiz_grade || ''}</td>` +
             '</tr>';
     }
-    html += '</tbody></table>';
+    html += '</tbody></table></div>';
     tableDiv.innerHTML = html;
 }
 
@@ -1235,6 +1247,79 @@ async function importFullBackup(event) {
         loadAllQRCodes();
     } catch (error) {
         showStatus('create-status', 'Error importing full backup', 'error');
+    }
+}
+
+// Export all QR codes to PDF
+async function exportAllQRCodesToPDF() {
+    try {
+        const qrcodes = await db.qrcodes.toArray();
+        if (qrcodes.length === 0) {
+            showStatus('create-status', 'No QR codes to export', 'error');
+            return;
+        }
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'landscape' });
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const colWidths = [50, 50, 50, 60]; // Name, Phone, Date, QR
+        let y = 20;
+        // Table header
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Name', 10, y);
+        doc.text('Phone', 60, y);
+        doc.text('Created Date', 110, y);
+        doc.text('QR Code', 170, y);
+        y += 10;
+        doc.setFont('helvetica', 'normal');
+        for (const qr of qrcodes) {
+            if (y > 180) { // New page if needed
+                doc.addPage();
+                y = 20;
+            }
+            doc.text(qr.name || '', 10, y);
+            doc.text(qr.phone || '', 60, y);
+            doc.text(qr.created_date || '', 110, y);
+            // Generate QR image
+            let qrImgSrc = '';
+            if (typeof QRCode !== 'undefined' && QRCode.toDataURL) {
+                try {
+                    qrImgSrc = await QRCode.toDataURL(qr.phone, { width: 60, margin: 1, color: { dark: '#000000', light: '#FFFFFF' } });
+                } catch (e) {
+                    qrImgSrc = `https://api.qrserver.com/v1/create-qr-code/?size=60x60&data=${encodeURIComponent(qr.phone)}&color=000000&bgcolor=FFFFFF`;
+                }
+            } else {
+                qrImgSrc = `https://api.qrserver.com/v1/create-qr-code/?size=60x60&data=${encodeURIComponent(qr.phone)}&color=000000&bgcolor=FFFFFF`;
+            }
+            // Add QR image to PDF
+            if (qrImgSrc.startsWith('data:')) {
+                doc.addImage(qrImgSrc, 'PNG', 170, y - 7, 15, 15);
+            } else {
+                // Fallback: load image and convert to dataURL
+                await new Promise((resolve) => {
+                    const img = new window.Image();
+                    img.crossOrigin = 'anonymous';
+                    img.onload = function() {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = 60;
+                        canvas.height = 60;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, 60, 60);
+                        const dataUrl = canvas.toDataURL('image/png');
+                        doc.addImage(dataUrl, 'PNG', 170, y - 7, 15, 15);
+                        resolve();
+                    };
+                    img.onerror = function() { resolve(); };
+                    img.src = qrImgSrc;
+                });
+            }
+            y += 20;
+        }
+        doc.save(`all_qrcodes_${new Date().toISOString().split('T')[0]}.pdf`);
+        showStatus('create-status', 'All QR codes exported to PDF!', 'success');
+    } catch (error) {
+        console.error('Error exporting all QR codes to PDF:', error);
+        showStatus('create-status', 'Error exporting all QR codes to PDF', 'error');
     }
 }
 
