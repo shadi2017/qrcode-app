@@ -620,7 +620,6 @@ async function showQRDetails(qrId) {
             .equals(qrId)
             .reverse()
             .sortBy('id');
-        const latestEval = evaluation.length > 0 ? evaluation[evaluation.length - 1] : null;
         // Get scan history
         const scans = await db.scans
             .where('phone')
@@ -646,32 +645,12 @@ async function showQRDetails(qrId) {
             ${scanHistoryHtml}
         `;
         await loadEvaluationOptions();
-        // Set current values if evaluation exists
-        if (latestEval) {
-            document.getElementById('attendance').value = latestEval.attendance || '';
-            document.getElementById('commitment').value = latestEval.commitment || '';
-            document.getElementById('bible').value = latestEval.bible || '';
-            document.getElementById('memorization').value = latestEval.memorization || '';
-            document.getElementById('memorization_parts').value = latestEval.memorization_parts || '';
-            document.getElementById('mobile').value = latestEval.mobile || '';
-            document.getElementById('hymns').value = latestEval.hymns || '';
-            document.getElementById('games').value = latestEval.games || '';
-            document.getElementById('competition').value = latestEval.competition || '';
-            document.getElementById('project').value = latestEval.project || '';
-            document.getElementById('quiz_grade').value = latestEval.quiz_grade || '';
-            document.getElementById('evaluation-date').value = latestEval.eval_date || new Date().toISOString().split('T')[0];
-        } else {
-            document.querySelectorAll('.eval-dropdown').forEach(dropdown => {
-                dropdown.value = '';
-            });
-            document.getElementById('evaluation-date').value = new Date().toISOString().split('T')[0];
-        }
-        // Always reset dropdowns to default '-- Select --' when opening, unless prefilling from latestEval
-        if (!latestEval) {
-            document.querySelectorAll('.eval-dropdown').forEach(dropdown => {
-                dropdown.selectedIndex = 0;
-            });
-        }
+        // Always reset dropdowns to default '-- Select --' when opening
+        document.querySelectorAll('.eval-dropdown').forEach(dropdown => {
+            dropdown.value = '';
+            dropdown.selectedIndex = 0;
+        });
+        document.getElementById('evaluation-date').value = new Date().toISOString().split('T')[0];
         const saveBtn = document.getElementById('save-evaluation');
         saveBtn.onclick = () => saveEvaluation(qrId);
         // Render evaluation history
