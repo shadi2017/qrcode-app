@@ -1300,26 +1300,24 @@ async function importFullBackup(event) {
 }
 
 // Enhanced Export all QR codes to PDF with optimized grid layout
-aasync function exportAllQRCodesToPDF() {
+// ...existing code...
+async function exportAllQRCodesToPDF() {
     try {
         const qrcodes = await db.qrcodes.toArray();
         if (qrcodes.length === 0) {
             showStatus('create-status', 'No QR codes to export', 'error');
             return;
         }
-        
         const { jsPDF } = window.jspdf;
-        // A4 size: 210mm x 297mm
         const doc = new jsPDF({ unit: 'mm', format: 'a4' });
         const qrSize = 20; // 2cm = 20mm
-        const margin = 10; // 10mm margin
-        const spacing = 5; // 5mm between QR codes
-        const nameHeight = 6; // Height for the name text
+        const margin = 10;
+        const spacing = 5;
+        const nameHeight = 7; // Height for the name text
         const cols = Math.floor((210 - 2 * margin + spacing) / (qrSize + spacing));
         const rows = Math.floor((297 - 2 * margin + spacing) / (qrSize + spacing + nameHeight));
-        
         let x = margin, y = margin, count = 0;
-        
+
         for (let i = 0; i < qrcodes.length; i++) {
             let qrImgSrc = '';
             if (typeof QRCode !== 'undefined' && QRCode.toDataURL) {
@@ -1335,8 +1333,6 @@ aasync function exportAllQRCodesToPDF() {
             } else {
                 qrImgSrc = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrcodes[i].phone)}&color=000000&bgcolor=FFFFFF`;
             }
-            
-            // Convert external images to data URLs
             if (!qrImgSrc.startsWith('data:')) {
                 qrImgSrc = await new Promise((resolve) => {
                     const img = new window.Image();
@@ -1353,22 +1349,20 @@ aasync function exportAllQRCodesToPDF() {
                     img.src = qrImgSrc;
                 });
             }
-            
             if (qrImgSrc) {
                 doc.addImage(qrImgSrc, 'PNG', x, y, qrSize, qrSize);
-                // Draw the name under the QR code, centered
-                doc.setFontSize(8);
+                // Draw the name under the QR code, centered, bold, black
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(9);
+                doc.setTextColor(0, 0, 0);
                 doc.text(
                     qrcodes[i].name || '',
                     x + qrSize / 2,
-                    y + qrSize + 5, // 5mm below the QR code
+                    y + qrSize + 6, // 6mm below the top of QR
                     { align: 'center' }
                 );
             }
-            
             count++;
-            
-            // Move to next position
             x += qrSize + spacing;
             if (count % cols === 0) {
                 x = margin;
@@ -1380,7 +1374,6 @@ aasync function exportAllQRCodesToPDF() {
                 }
             }
         }
-        
         doc.save(`qr_codes_${new Date().toISOString().split('T')[0]}.pdf`);
         showStatus('create-status', 'QR codes exported to PDF!', 'success');
     } catch (error) {
@@ -1388,7 +1381,7 @@ aasync function exportAllQRCodesToPDF() {
         showStatus('create-status', 'Error exporting all QR codes to PDF', 'error');
     }
 }
-
+// ...existing code...
 // Initialize app
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize database
