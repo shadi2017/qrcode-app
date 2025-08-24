@@ -297,15 +297,23 @@ function stopScanner() {
     }
 }
 
-// Check if already scanned today
-async function checkTodaysScan(phone) {
-    const today = new Date().toISOString().split('T')[0];
-    const todaysScan = await db.scans
+// Check if already scanned this hour
+async function checkHourlyScan(phone) {
+    const now = new Date();
+    const currentDate = now.toISOString().split('T')[0];
+    const currentHour = now.getHours();
+    
+    const hourlyScan = await db.scans
         .where('phone').equals(phone)
-        .and(scan => scan.scan_date === today)
+        .and(scan => {
+            const scanDate = scan.scan_date;
+            const scanTime = scan.scan_time;
+            const scanHour = parseInt(scanTime.split(':')[0]);
+            return scanDate === currentDate && scanHour === currentHour;
+        })
         .first();
     
-    return todaysScan !== undefined;
+    return hourlyScan !== undefined;
 }
 
 async function onScanSuccess(decodedText, decodedResult) {
@@ -314,22 +322,22 @@ async function onScanSuccess(decodedText, decodedResult) {
         const qrRecord = await db.qrcodes.where('phone').equals(decodedText).first();
         
         if (qrRecord) {
-            // Check if already scanned today
-            const alreadyScannedToday = await checkTodaysScan(decodedText);
+            // Check if already scanned this hour
+            const alreadyScannedThisHour = await checkHourlyScan(decodedText);
             
-            if (alreadyScannedToday) {
+            if (alreadyScannedThisHour) {
                 // Show already scanned message
                 const resultDiv = document.getElementById('scan-result');
                 resultDiv.innerHTML = `
-                    <h3>Already Scanned Today!</h3>
+                    <h3>Already Scanned This Hour!</h3>
                     <p><strong>Name:</strong> ${qrRecord.name}</p>
                     <p><strong>Phone:</strong> ${qrRecord.phone}</p>
-                    <p><strong>Status:</strong> This QR code has already been scanned today. Please try again tomorrow.</p>
+                    <p><strong>Status:</strong> This QR code has already been scanned this hour. Please try again in the next hour.</p>
                 `;
                 resultDiv.style.display = 'block';
                 resultDiv.className = 'scanner-result already-scanned';
                 
-                showStatus('scan-status', 'QR Code already scanned today!', 'error');
+                showStatus('scan-status', 'QR Code already scanned this hour!', 'error');
                 
                 // Stop scanner after showing message
                 setTimeout(() => {
