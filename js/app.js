@@ -601,6 +601,7 @@ async function loadAllQRCodes() {
                 <td><img src="${qrImgSrc}" alt="QR" style="width:80px;height:80px;"></td>
                 <td>
                     <button class="action-btn" onclick="editQRCode(${qr.id}, event)">Edit</button>
+                    <button class="action-btn" style="background:#388e3c" onclick="downloadQRCode('${qr.name.replace(/'/g, "\\'")}', '${qr.phone}', '${qrImgSrc}', event)">Download</button>
                     <button class="action-btn" style="background:#e53935" onclick="deleteQRCode(${qr.id}, event)">Delete</button>
                 </td>
             `;
@@ -1139,40 +1140,6 @@ async function exportSummaryToExcel() {
     }
 }
 
-// Helper function to count evaluation statistics
-function countEvalStat(statObj, value) {
-    if (value) {
-        if (statObj[value]) {
-            statObj[value]++;
-        } else {
-            statObj[value] = 1;
-        }
-    }
-}
-
-// Helper function to generate HTML for evaluation statistics
-function generateEvalStatHtml(title, statObj) {
-    const entries = Object.entries(statObj);
-    
-    if (entries.length === 0) {
-        return `
-            <div class="summary-item">
-                <span>${title}:</span>
-                <span>No data</span>
-            </div>
-        `;
-    }
-    
-    return `
-        <div class="summary-item">
-            <span>${title}:</span>
-            <span>
-                ${entries.map(([value, count]) => `${value}: ${count}`).join(', ')}
-            </span>
-        </div>
-    `;
-}
-
 // Export evaluation options and evaluations as JSON
 async function exportEvaluationData() {
     try {
@@ -1418,3 +1385,44 @@ document.addEventListener('DOMContentLoaded', function() {
     const qrDetailsModal = document.getElementById('qr-details-modal');
     if (qrDetailsModal) qrDetailsModal.style.display = 'none';
 });
+
+// Download QR code image
+window.downloadQRCode = async function(name, phone, imgSrc, event) {
+    event.stopPropagation();
+    // Create a canvas to draw QR and name
+    const canvas = document.createElement('canvas');
+    const size = 300; // QR size
+    const height = 340; // Extra space for name
+    canvas.width = size;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+
+    // Draw QR image
+    const img = new window.Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = function() {
+        ctx.clearRect(0, 0, size, height);
+        ctx.drawImage(img, 0, 0, size, size);
+
+        // Draw name under QR
+        ctx.font = '20px Arial';
+        ctx.fillStyle = '#333';
+        ctx.textAlign = 'center';
+        ctx.fillText(name, size / 2, size + 30); // 30px below QR
+
+        // Download as image
+        canvas.toBlob(function(blob) {
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            // Clean filename
+            const cleanName = (name || 'qr').replace(/[^a-zA-Z0-9_\u0600-\u06FF]/g, '_');
+            link.download = `${cleanName}_${phone}.png`;
+            link.href = url;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }, 'image/png');
+    };
+    img.src = imgSrc;
+};
