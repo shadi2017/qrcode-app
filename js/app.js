@@ -1300,7 +1300,7 @@ async function importFullBackup(event) {
 }
 
 // Enhanced Export all QR codes to PDF with optimized grid layout
-async function exportAllQRCodesToPDF() {
+aasync function exportAllQRCodesToPDF() {
     try {
         const qrcodes = await db.qrcodes.toArray();
         if (qrcodes.length === 0) {
@@ -1314,8 +1314,9 @@ async function exportAllQRCodesToPDF() {
         const qrSize = 20; // 2cm = 20mm
         const margin = 10; // 10mm margin
         const spacing = 5; // 5mm between QR codes
+        const nameHeight = 6; // Height for the name text
         const cols = Math.floor((210 - 2 * margin + spacing) / (qrSize + spacing));
-        const rows = Math.floor((297 - 2 * margin + spacing) / (qrSize + spacing));
+        const rows = Math.floor((297 - 2 * margin + spacing) / (qrSize + spacing + nameHeight));
         
         let x = margin, y = margin, count = 0;
         
@@ -1355,6 +1356,14 @@ async function exportAllQRCodesToPDF() {
             
             if (qrImgSrc) {
                 doc.addImage(qrImgSrc, 'PNG', x, y, qrSize, qrSize);
+                // Draw the name under the QR code, centered
+                doc.setFontSize(8);
+                doc.text(
+                    qrcodes[i].name || '',
+                    x + qrSize / 2,
+                    y + qrSize + 5, // 5mm below the QR code
+                    { align: 'center' }
+                );
             }
             
             count++;
@@ -1363,7 +1372,7 @@ async function exportAllQRCodesToPDF() {
             x += qrSize + spacing;
             if (count % cols === 0) {
                 x = margin;
-                y += qrSize + spacing;
+                y += qrSize + spacing + nameHeight;
                 if ((count / cols) % rows === 0 && i !== qrcodes.length - 1) {
                     doc.addPage();
                     x = margin;
