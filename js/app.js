@@ -984,7 +984,8 @@ async function generateSummaryReport() {
         let perQRHtml = '';
         for (const qr of qrcodes) {
             const qrEvals = evaluations.filter(e => e.qrcode_id === qr.id);
-            if (qrEvals.length === 0) continue;
+            const qrScans = scans.filter(s => s.phone === qr.phone);
+            if (qrEvals.length === 0 && qrScans.length === 0) continue;
             // Count per value for this QR
             const perStat = {
                 attendance: {},
@@ -1012,10 +1013,28 @@ async function generateSummaryReport() {
                 countEvalStat(perStat.project, eval.project);
                 countEvalStat(perStat.quiz_grade, eval.quiz_grade);
             });
+
+            // Build scan history table
+            let scanHistoryHtml = '';
+            if (qrScans.length > 0) {
+                scanHistoryHtml = `
+                    <div><b>Scan History (Total: ${qrScans.length})</b></div>
+                    <table class="table table-bordered table-sm mt-2 mb-0" style="background:#fff;">
+                        <thead><tr><th>#</th><th>Date</th><th>Time</th></tr></thead>
+                        <tbody>
+                            ${qrScans.map((scan, idx) => `<tr><td>${idx + 1}</td><td>${scan.scan_date}</td><td>${scan.scan_time}</td></tr>`).join('')}
+                        </tbody>
+                    </table>
+                `;
+            } else {
+                scanHistoryHtml = `<div>No scans for this QR code.</div>`;
+            }
+
             // Use a table for better formatting
             perQRHtml += `
                 <div class="summary-item mb-3">
                     <div><b>${qr.name} (${qr.phone})</b> - Total Evaluations: ${qrEvals.length}</div>
+                    <div>${scanHistoryHtml}</div>
                     <table class="table table-bordered table-sm mt-2 mb-0" style="background:#fff;">
                         <tbody>
                             <tr><th>الحضور</th><td>${Object.entries(perStat.attendance).map(([v, c]) => `${v}: ${c}`).join(', ') || 'No data'}</td></tr>
@@ -1426,3 +1445,10 @@ window.downloadQRCode = async function(name, phone, imgSrc, event) {
     };
     img.src = imgSrc;
 };
+
+// Helper to generate evaluation stats HTML
+function generateEvalStatHtml(label, statObj) {
+    const entries = Object.entries(statObj);
+    if (entries.length === 0) return `<div class="summary-item">${label}: No data</div>`;
+    return `<div class="summary-item"><b>${label}:</b> ${entries.map(([v, c]) => `${v}: ${c}`).join(', ')}</div>`;
+}
