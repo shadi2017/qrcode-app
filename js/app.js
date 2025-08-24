@@ -567,51 +567,92 @@ function exportReportsToExcel() {
     showStatus('create-status', 'Reports exported as Excel (CSV) file!', 'success');
 }
 
-// Load and display all QR codes in a table
+// Load and display all QR codes in a table with Edit/Delete functionality
 async function loadAllQRCodes() {
     const tbody = document.getElementById('qrlist-tbody');
     tbody.innerHTML = '';
     try {
         const qrcodes = await db.qrcodes.toArray();
         if (qrcodes.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">No QR codes found</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">No QR codes found</td></tr>';
             return;
         }
         for (const qr of qrcodes) {
             const row = document.createElement('tr');
-            row.dataset.id = qr.id; // Store QR code ID in dataset
+            row.dataset.id = qr.id;
             row.classList.add('clickable-row');
             
-            // Generate QR image as data URL or fallback
-            let qrImgHtml = '';
+            // Generate QR image
             let qrImgSrc = '';
             if (typeof QRCode !== 'undefined' && QRCode.toDataURL) {
                 try {
                     qrImgSrc = await QRCode.toDataURL(qr.phone, { width: 80, margin: 1, color: { dark: '#000000', light: '#FFFFFF' } });
-                    qrImgHtml = `<img src="${qrImgSrc}" alt="QR" style="width:80px;height:80px;">`;
                 } catch (e) {
-                    // fallback
                     qrImgSrc = `https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(qr.phone)}&color=000000&bgcolor=FFFFFF`;
-                    qrImgHtml = `<img src="${qrImgSrc}" alt="QR" style="width:80px;height:80px;">`;
                 }
             } else {
                 qrImgSrc = `https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(qr.phone)}&color=000000&bgcolor=FFFFFF`;
-                qrImgHtml = `<img src="${qrImgSrc}" alt="QR" style="width:80px;height:80px;">`;
             }
+            
             row.innerHTML = `
                 <td>${qr.name}</td>
                 <td>${qr.phone}</td>
                 <td>${qr.created_date || ''}</td>
-                <td>${qrImgHtml}</td>
+                <td><img src="${qrImgSrc}" alt="QR" style="width:80px;height:80px;"></td>
+                <td>
+                    <button class="action-btn" onclick="editQRCode(${qr.id}, event)">Edit</button>
+                    <button class="action-btn" style="background:#e53935" onclick="deleteQRCode(${qr.id}, event)">Delete</button>
+                </td>
             `;
             tbody.appendChild(row);
             
-            // Add click event to show details
-            row.addEventListener('click', () => showQRDetails(qr.id));
+            // Row click for details (excluding button clicks)
+            row.addEventListener('click', (e) => {
+                if (e.target.tagName !== 'BUTTON') showQRDetails(qr.id);
+            });
         }
     } catch (error) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">Error loading QR codes</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">Error loading QR codes</td></tr>';
     }
+}
+
+// Edit QR code (show prompt for name/phone)
+window.editQRCode = async function(id, event) {
+    event.stopPropagation();
+    const qr = await db.qrcodes.get(id);
+    if (!qr) return;
+    
+    const newName = prompt('Edit Name:', qr.name);
+    if (newName === null) return;
+    
+    const newPhone = prompt('Edit Phone:', qr.phone);
+    if (newPhone === null) return;
+    
+    if (!newName.trim() || !newPhone.trim()) {
+        alert('Name and phone cannot be empty.');
+        return;
+    }
+    
+    // Check for duplicate phone
+    const exists = await db.qrcodes.where('phone').equals(newPhone).and(q => q.id !== id).first();
+    if (exists) {
+        alert('This phone number already exists for another QR code.');
+        return;
+    }
+    
+    await db.qrcodes.update(id, { name: newName.trim(), phone: newPhone.trim() });
+    showStatus('create-status', 'QR code updated!', 'success');
+    loadAllQRCodes();
+}
+
+// Delete QR code (with confirmation)
+window.deleteQRCode = async function(id, event) {
+    event.stopPropagation();
+    if (!confirm('Are you sure you want to delete this QR code? This cannot be undone.')) return;
+    
+    await db.qrcodes.delete(id);
+    showStatus('create-status', 'QR code deleted!', 'success');
+    loadAllQRCodes();
 }
 
 // Show QR code details in modal
@@ -1258,7 +1299,7 @@ async function importFullBackup(event) {
     }
 }
 
-// Export all QR codes to PDF
+// Enhanced Export all QR codes to PDF with optimized grid layout
 async function exportAllQRCodesToPDF() {
     try {
         const qrcodes = await db.qrcodes.toArray();
@@ -1266,65 +1307,73 @@ async function exportAllQRCodesToPDF() {
             showStatus('create-status', 'No QR codes to export', 'error');
             return;
         }
+        
         const { jsPDF } = window.jspdf;
-        const doc = new jsPDF({ orientation: 'landscape' });
-        const pageWidth = doc.internal.pageSize.getWidth();
-        const colWidths = [50, 50, 50, 60]; // Name, Phone, Date, QR
-        let y = 20;
-        // Table header
-        doc.setFontSize(14);
-        doc.setFont('helvetica', 'bold');
-        doc.text('Name', 10, y);
-        doc.text('Phone', 60, y);
-        doc.text('Created Date', 110, y);
-        doc.text('QR Code', 170, y);
-        y += 10;
-        doc.setFont('helvetica', 'normal');
-        for (const qr of qrcodes) {
-            if (y > 180) { // New page if needed
-                doc.addPage();
-                y = 20;
-            }
-            doc.text(qr.name || '', 10, y);
-            doc.text(qr.phone || '', 60, y);
-            doc.text(qr.created_date || '', 110, y);
-            // Generate QR image
+        // A4 size: 210mm x 297mm
+        const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+        const qrSize = 20; // 2cm = 20mm
+        const margin = 10; // 10mm margin
+        const spacing = 5; // 5mm between QR codes
+        const cols = Math.floor((210 - 2 * margin + spacing) / (qrSize + spacing));
+        const rows = Math.floor((297 - 2 * margin + spacing) / (qrSize + spacing));
+        
+        let x = margin, y = margin, count = 0;
+        
+        for (let i = 0; i < qrcodes.length; i++) {
             let qrImgSrc = '';
             if (typeof QRCode !== 'undefined' && QRCode.toDataURL) {
                 try {
-                    qrImgSrc = await QRCode.toDataURL(qr.phone, { width: 60, margin: 1, color: { dark: '#000000', light: '#FFFFFF' } });
+                    qrImgSrc = await QRCode.toDataURL(qrcodes[i].phone, { 
+                        width: 200, 
+                        margin: 0, 
+                        color: { dark: '#000000', light: '#FFFFFF' } 
+                    });
                 } catch (e) {
-                    qrImgSrc = `https://api.qrserver.com/v1/create-qr-code/?size=60x60&data=${encodeURIComponent(qr.phone)}&color=000000&bgcolor=FFFFFF`;
+                    qrImgSrc = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrcodes[i].phone)}&color=000000&bgcolor=FFFFFF`;
                 }
             } else {
-                qrImgSrc = `https://api.qrserver.com/v1/create-qr-code/?size=60x60&data=${encodeURIComponent(qr.phone)}&color=000000&bgcolor=FFFFFF`;
+                qrImgSrc = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrcodes[i].phone)}&color=000000&bgcolor=FFFFFF`;
             }
-            // Add QR image to PDF
-            if (qrImgSrc.startsWith('data:')) {
-                doc.addImage(qrImgSrc, 'PNG', 170, y - 7, 15, 15);
-            } else {
-                // Fallback: load image and convert to dataURL
-                await new Promise((resolve) => {
+            
+            // Convert external images to data URLs
+            if (!qrImgSrc.startsWith('data:')) {
+                qrImgSrc = await new Promise((resolve) => {
                     const img = new window.Image();
                     img.crossOrigin = 'anonymous';
                     img.onload = function() {
                         const canvas = document.createElement('canvas');
-                        canvas.width = 60;
-                        canvas.height = 60;
+                        canvas.width = 200;
+                        canvas.height = 200;
                         const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0, 60, 60);
-                        const dataUrl = canvas.toDataURL('image/png');
-                        doc.addImage(dataUrl, 'PNG', 170, y - 7, 15, 15);
-                        resolve();
+                        ctx.drawImage(img, 0, 0, 200, 200);
+                        resolve(canvas.toDataURL('image/png'));
                     };
-                    img.onerror = function() { resolve(); };
+                    img.onerror = function() { resolve(''); };
                     img.src = qrImgSrc;
                 });
             }
-            y += 20;
+            
+            if (qrImgSrc) {
+                doc.addImage(qrImgSrc, 'PNG', x, y, qrSize, qrSize);
+            }
+            
+            count++;
+            
+            // Move to next position
+            x += qrSize + spacing;
+            if (count % cols === 0) {
+                x = margin;
+                y += qrSize + spacing;
+                if ((count / cols) % rows === 0 && i !== qrcodes.length - 1) {
+                    doc.addPage();
+                    x = margin;
+                    y = margin;
+                }
+            }
         }
-        doc.save(`all_qrcodes_${new Date().toISOString().split('T')[0]}.pdf`);
-        showStatus('create-status', 'All QR codes exported to PDF!', 'success');
+        
+        doc.save(`qr_codes_${new Date().toISOString().split('T')[0]}.pdf`);
+        showStatus('create-status', 'QR codes exported to PDF!', 'success');
     } catch (error) {
         console.error('Error exporting all QR codes to PDF:', error);
         showStatus('create-status', 'Error exporting all QR codes to PDF', 'error');
